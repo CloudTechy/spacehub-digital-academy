@@ -19,6 +19,7 @@ export function CourseCategories({ onViewCatalog }: CourseCategoriesProps) {
       color: "from-blue-500 to-cyan-500",
       bgColor: "bg-blue-50",
       textColor: "text-blue-600",
+      image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=250&fit=crop",
     },
     {
       icon: BarChart3,
@@ -28,6 +29,7 @@ export function CourseCategories({ onViewCatalog }: CourseCategoriesProps) {
       color: "from-purple-500 to-pink-500",
       bgColor: "bg-purple-50",
       textColor: "text-purple-600",
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop",
     },
     {
       icon: Palette,
@@ -37,6 +39,7 @@ export function CourseCategories({ onViewCatalog }: CourseCategoriesProps) {
       color: "from-green-500 to-emerald-500",
       bgColor: "bg-green-50",
       textColor: "text-green-600",
+      image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=250&fit=crop",
     },
     {
       icon: TrendingUp,
@@ -46,6 +49,7 @@ export function CourseCategories({ onViewCatalog }: CourseCategoriesProps) {
       color: "from-yellow-500 to-orange-500",
       bgColor: "bg-yellow-50",
       textColor: "text-yellow-600",
+      image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop",
     },
     {
       icon: Zap,
@@ -55,6 +59,7 @@ export function CourseCategories({ onViewCatalog }: CourseCategoriesProps) {
       color: "from-indigo-500 to-blue-500",
       bgColor: "bg-indigo-50",
       textColor: "text-indigo-600",
+      image: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=250&fit=crop",
     },
     {
       icon: Megaphone,
@@ -64,6 +69,7 @@ export function CourseCategories({ onViewCatalog }: CourseCategoriesProps) {
       color: "from-red-500 to-pink-500",
       bgColor: "bg-red-50",
       textColor: "text-red-600",
+      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop",
     },
   ]
 
@@ -84,24 +90,30 @@ export function CourseCategories({ onViewCatalog }: CourseCategoriesProps) {
           {categories.map((category, index) => (
             <Card
               key={index}
-              className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
             >
-              <CardContent className="p-6">
-                <div className={`w-16 h-16 ${category.bgColor} rounded-2xl flex items-center justify-center mb-4`}>
-                  <category.icon className={`h-8 w-8 ${category.textColor}`} />
+              <div className="relative">
+                <img
+                  src={category.image || "/placeholder.svg"}
+                  alt={category.title}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div
+                  className={`absolute top-4 left-4 w-12 h-12 ${category.bgColor} rounded-xl flex items-center justify-center`}
+                >
+                  <category.icon className={`h-6 w-6 ${category.textColor}`} />
                 </div>
-
+              </div>
+              <CardContent className="p-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{category.title}</h3>
-
                 <p className="text-gray-600 mb-4">{category.description}</p>
-
                 <div className="flex items-center justify-between mb-4">
                   <Badge variant="secondary" className="flex items-center gap-1">
                     <Users className="h-3 w-3" />
                     {category.students} students
                   </Badge>
                 </div>
-
                 <Button className="w-full bg-transparent" variant="outline" onClick={onViewCatalog}>
                   Learn More
                   <ArrowRight className="ml-2 h-4 w-4" />

@@ -272,8 +272,16 @@ export function StaffDashboard({ onBack }: StaffDashboardProps) {
                     <div key={task.id} className="p-3 border rounded-lg">
                       <p className="font-medium text-sm text-gray-900">{task.task}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge variant={task.priority === 'High' ? 'destructive' : 
-                          task.priority === 'Medium' ? 'default' : 'secondary'} className="text-xs">
+                        <Badge
+                          variant={
+                            task.priority === "High"
+                              ? "destructive"
+                              : task.priority === "Medium"
+                                ? "default"
+                                : "secondary"
+                          }
+                          className="text-xs"
+                        >
                           {task.priority}
                         </Badge>
                         <span className="text-xs text-gray-500">{task.dueDate}</span>
@@ -306,7 +314,7 @@ export function StaffDashboard({ onBack }: StaffDashboardProps) {
                           <div>
                             <p className="text-sm text-gray-600">{stat.title}</p>
                             <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                            <p className={`text-sm ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                            <p className={`text-sm ${stat.trend === "up" ? "text-green-600" : "text-red-600"}`}>
                               {stat.change} from last month
                             </p>
                           </div>
@@ -342,10 +350,187 @@ export function StaffDashboard({ onBack }: StaffDashboardProps) {
                                 <span className="text-xs text-gray-500">{student.progress}%</span>
                               </div>
                             </div>
-                            <Badge variant={student.status === 'Active' ? 'default' : 'destructive'}>
+                            <Badge variant={student.status === "Active" ? "default" : "destructive"}>
                               {student.status}
                             </Badge>
                           </div>
                         ))}
                       </div>
-                    </Car\
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Upcoming Sessions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {upcomingSessions.map((session) => (
+                          <div key={session.id} className="p-3 border rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-gray-900">{session.title}</h4>
+                              <Badge variant="outline">{session.type}</Badge>
+                            </div>
+                            <p className="text-sm text-gray-600">{session.time}</p>
+                            <p className="text-sm text-gray-500">
+                              {session.date} • {session.students} students
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="students" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All Students</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {recentStudents.map((student) => (
+                        <div key={student.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                          <img
+                            src={student.avatar || "/placeholder.svg"}
+                            alt={student.name}
+                            className="w-12 h-12 rounded-full"
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{student.name}</h4>
+                            <p className="text-sm text-gray-600">{student.email}</p>
+                            <p className="text-sm text-gray-500">{student.course}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium">{student.progress}% Complete</p>
+                            <p className="text-xs text-gray-500">Last active: {student.lastActive}</p>
+                          </div>
+                          <Badge variant={student.status === "Active" ? "default" : "destructive"}>
+                            {student.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="courses" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Course Performance</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {coursePerformance.map((course, index) => (
+                        <div key={index} className="p-4 border rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900">{course.course}</h4>
+                            <span className="text-lg font-bold text-green-600">{course.revenue}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <p className="text-gray-600">Students</p>
+                              <p className="font-medium">{course.students.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Completion</p>
+                              <p className="font-medium">{course.completion}%</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Rating</p>
+                              <p className="font-medium">{course.rating}/5</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="schedule" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>My Schedule</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {upcomingSessions.map((session) => (
+                        <div key={session.id} className="p-4 border rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-900">{session.title}</h4>
+                            <Badge variant="outline">{session.type}</Badge>
+                          </div>
+                          <p className="text-gray-600">{session.time}</p>
+                          <p className="text-sm text-gray-500">
+                            {session.date} • {session.students} students
+                          </p>
+                          <div className="mt-3 flex gap-2">
+                            <Button size="sm">Join Session</Button>
+                            <Button size="sm" variant="outline">
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Student Engagement</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Average Session Attendance</span>
+                          <span className="font-bold">92%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Assignment Submission Rate</span>
+                          <span className="font-bold">87%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Student Satisfaction</span>
+                          <span className="font-bold">4.8/5</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Course Metrics</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Total Course Hours</span>
+                          <span className="font-bold">240 hrs</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Modules Completed</span>
+                          <span className="font-bold">18/20</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Average Grade</span>
+                          <span className="font-bold">85%</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

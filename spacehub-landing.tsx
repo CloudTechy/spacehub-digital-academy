@@ -1,338 +1,299 @@
 "use client"
 
 import { useState } from "react"
-import { LeadCaptureModal } from "./components/lead-capture-modal"
-import { ExitIntentPopup } from "./components/exit-intent-popup"
-import { FloatingCTA } from "./components/floating-cta"
-import { InlineLeadForm } from "./components/inline-lead-form"
+import { Button } from "@/components/ui/button"
 import { HeroSection } from "./components/hero-section"
 import { ProblemSection } from "./components/problem-section"
 import { SolutionSection } from "./components/solution-section"
 import { SuccessStories } from "./components/success-stories"
-import { FinalCTA } from "./components/final-cta"
 import { PricingSection } from "./components/pricing-section"
-import { CourseCategories } from "./components/course-categories"
+import { FinalCTA } from "./components/final-cta"
 import { CourseCatalog } from "./components/course-catalog"
-import { CourseDetailPage } from "./components/course-detail-page"
+import { CoursePreview } from "./components/course-preview"
 import { AboutPage } from "./components/about-page"
-import type { DetailedCourse } from "./lib/courses-data"
-
-type ViewState = "landing" | "catalog" | "course-detail" | "about"
+import { ContactPage } from "./components/contact-page"
+import { StudentDashboard } from "./components/student-dashboard"
+import { StaffDashboard } from "./components/staff-dashboard"
+import { AuthModal } from "./components/auth-modal"
+import { Menu, X, User, GraduationCap } from "lucide-react"
 
 export default function SpaceHubLanding() {
-  const [showLeadModal, setShowLeadModal] = useState(false)
-  const [currentView, setCurrentView] = useState<ViewState>("landing")
-  const [selectedCourse, setSelectedCourse] = useState<DetailedCourse | null>(null)
+  const [currentView, setCurrentView] = useState<
+    "home" | "courses" | "course-preview" | "about" | "contact" | "student-dashboard" | "staff-dashboard"
+  >("home")
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("")
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userType, setUserType] = useState<"student" | "staff" | null>(null)
 
-  const handleViewCatalog = () => {
-    setCurrentView("catalog")
+  const handleCoursePreview = (courseId: string) => {
+    setSelectedCourseId(courseId)
+    setCurrentView("course-preview")
   }
 
-  const handleViewAbout = () => {
-    setCurrentView("about")
+  const handleCourseEnroll = (courseId: string) => {
+    if (!isLoggedIn) {
+      setIsAuthModalOpen(true)
+    } else {
+      // Handle enrollment logic
+      alert(`Enrolling in course: ${courseId}`)
+    }
   }
 
-  const handleCourseSelect = (course: DetailedCourse) => {
-    setSelectedCourse(course)
-    setCurrentView("course-detail")
+  const handleStudentLogin = (credentials: { email: string; password: string }) => {
+    // In a real app, this would validate credentials
+    setIsLoggedIn(true)
+    setUserType("student")
+    setCurrentView("student-dashboard")
   }
 
-  const handleBackToLanding = () => {
-    setCurrentView("landing")
-    setSelectedCourse(null)
+  const handleStaffLogin = (credentials: { email: string; password: string }) => {
+    // In a real app, this would validate credentials
+    setIsLoggedIn(true)
+    setUserType("staff")
+    setCurrentView("staff-dashboard")
   }
 
-  const handleBackToCatalog = () => {
-    setCurrentView("catalog")
-    setSelectedCourse(null)
+  const handleSignup = (data: { name: string; email: string; password: string }) => {
+    // In a real app, this would create a new account
+    setIsLoggedIn(true)
+    setUserType("student")
+    setCurrentView("student-dashboard")
   }
 
-  if (currentView === "about") {
-    return (
-      <div className="min-h-screen">
-        {/* Navigation */}
-        <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50">
-          <div className="container max-w-6xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2" onClick={handleBackToLanding} role="button">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">SpaceHub</span>
-              </div>
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setUserType(null)
+    setCurrentView("home")
+  }
 
-              <div className="hidden md:flex items-center gap-6">
-                <button onClick={handleViewCatalog} className="text-gray-600 hover:text-gray-900">
-                  Courses
-                </button>
-                <button onClick={handleViewAbout} className="text-blue-600 font-medium">
-                  About
-                </button>
-                <a href="#success" className="text-gray-600 hover:text-gray-900">
-                  Success Stories
-                </a>
-                <button
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                  onClick={() => setShowLeadModal(true)}
-                >
-                  Get Started
-                </button>
-              </div>
+  const handleDashboardAccess = () => {
+    if (isLoggedIn) {
+      if (userType === "student") {
+        setCurrentView("student-dashboard")
+      } else if (userType === "staff") {
+        setCurrentView("staff-dashboard")
+      }
+    } else {
+      setIsAuthModalOpen(true)
+    }
+  }
+
+  const renderNavigation = () => (
+    <nav className="bg-white shadow-sm sticky top-0 z-50">
+      <div className="container max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView("home")}>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">S</span>
             </div>
+            <span className="text-xl font-bold text-gray-900">SpaceHub</span>
           </div>
-        </nav>
 
-        <div className="pt-20">
-          <AboutPage onBackToHome={handleBackToLanding} onViewCourses={handleViewCatalog} />
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-8">
+            <Button variant="ghost" onClick={() => setCurrentView("home")}>
+              Home
+            </Button>
+            <Button variant="ghost" onClick={() => setCurrentView("courses")}>
+              Courses
+            </Button>
+            <Button variant="ghost" onClick={() => setCurrentView("about")}>
+              About
+            </Button>
+            <Button variant="ghost" onClick={() => setCurrentView("contact")}>
+              Contact
+            </Button>
+
+            {isLoggedIn ? (
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" onClick={handleDashboardAccess}>
+                  {userType === "student" ? (
+                    <>
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </>
+                  ) : (
+                    <>
+                      <User className="h-4 w-4 mr-2" />
+                      Staff Portal
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={handleLogout}>
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={() => setIsAuthModalOpen(true)}>Login / Sign Up</Button>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
         </div>
 
-        <LeadCaptureModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} trigger="navigation" />
-      </div>
-    )
-  }
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t bg-white py-4">
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {
+                  setCurrentView("home")
+                  setIsMobileMenuOpen(false)
+                }}
+              >
+                Home
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {
+                  setCurrentView("courses")
+                  setIsMobileMenuOpen(false)
+                }}
+              >
+                Courses
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {
+                  setCurrentView("about")
+                  setIsMobileMenuOpen(false)
+                }}
+              >
+                About
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {
+                  setCurrentView("contact")
+                  setIsMobileMenuOpen(false)
+                }}
+              >
+                Contact
+              </Button>
 
-  if (currentView === "course-detail" && selectedCourse) {
-    return (
-      <div className="min-h-screen">
-        {/* Navigation */}
-        <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50">
-          <div className="container max-w-6xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2" onClick={handleBackToLanding} role="button">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">SpaceHub</span>
-              </div>
-
-              <div className="hidden md:flex items-center gap-6">
-                <button onClick={handleBackToCatalog} className="text-gray-600 hover:text-gray-900">
-                  Courses
-                </button>
-                <button onClick={handleViewAbout} className="text-gray-600 hover:text-gray-900">
-                  About
-                </button>
-                <a href="#success" className="text-gray-600 hover:text-gray-900">
-                  Success Stories
-                </a>
-                <button
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                  onClick={() => setShowLeadModal(true)}
+              {isLoggedIn ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      handleDashboardAccess()
+                      setIsMobileMenuOpen(false)
+                    }}
+                  >
+                    {userType === "student" ? (
+                      <>
+                        <GraduationCap className="h-4 w-4 mr-2" />
+                        Dashboard
+                      </>
+                    ) : (
+                      <>
+                        <User className="h-4 w-4 mr-2" />
+                        Staff Portal
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={() => {
+                      handleLogout()
+                      setIsMobileMenuOpen(false)
+                    }}
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  className="justify-start"
+                  onClick={() => {
+                    setIsAuthModalOpen(true)
+                    setIsMobileMenuOpen(false)
+                  }}
                 >
-                  Get Started
-                </button>
-              </div>
+                  Login / Sign Up
+                </Button>
+              )}
             </div>
           </div>
-        </nav>
-
-        <div className="pt-20">
-          <CourseDetailPage course={selectedCourse} onBack={handleBackToCatalog} />
-        </div>
-
-        <LeadCaptureModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} trigger="navigation" />
+        )}
       </div>
-    )
-  }
+    </nav>
+  )
 
-  if (currentView === "catalog") {
-    return (
-      <div className="min-h-screen">
-        {/* Navigation */}
-        <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50">
-          <div className="container max-w-6xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2" onClick={handleBackToLanding} role="button">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">SpaceHub</span>
-              </div>
-
-              <div className="hidden md:flex items-center gap-6">
-                <button onClick={() => setCurrentView("catalog")} className="text-blue-600 font-medium">
-                  Courses
-                </button>
-                <button onClick={handleViewAbout} className="text-gray-600 hover:text-gray-900">
-                  About
-                </button>
-                <a href="#success" className="text-gray-600 hover:text-gray-900">
-                  Success Stories
-                </a>
-                <button
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                  onClick={() => setShowLeadModal(true)}
-                >
-                  Get Started
-                </button>
-              </div>
-            </div>
+  const renderContent = () => {
+    switch (currentView) {
+      case "courses":
+        return (
+          <div className="container max-w-7xl mx-auto px-4 py-8">
+            <CourseCatalog onPreviewCourse={handleCoursePreview} onEnrollCourse={handleCourseEnroll} />
           </div>
-        </nav>
+        )
 
-        <div className="pt-20">
-          <CourseCatalog onCourseSelect={handleCourseSelect} />
-        </div>
+      case "course-preview":
+        return (
+          <CoursePreview
+            courseId={selectedCourseId}
+            onBack={() => setCurrentView("courses")}
+            onEnroll={() => handleCourseEnroll(selectedCourseId)}
+          />
+        )
 
-        <LeadCaptureModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} trigger="navigation" />
-      </div>
-    )
+      case "about":
+        return <AboutPage onBack={() => setCurrentView("home")} />
+
+      case "contact":
+        return <ContactPage onBack={() => setCurrentView("home")} />
+
+      case "student-dashboard":
+        return <StudentDashboard onBack={handleLogout} />
+
+      case "staff-dashboard":
+        return <StaffDashboard onBack={handleLogout} />
+
+      default:
+        return (
+          <div className="space-y-0">
+            <HeroSection onGetStarted={() => setCurrentView("courses")} />
+            <ProblemSection />
+            <SolutionSection />
+            <SuccessStories />
+            <PricingSection onEnroll={handleCourseEnroll} />
+            <FinalCTA onGetStarted={() => setCurrentView("courses")} />
+          </div>
+        )
+    }
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-sm border-b border-gray-200 z-50">
-        <div className="container max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">SpaceHub</span>
-            </div>
+    <div className="min-h-screen bg-white">
+      {renderNavigation()}
+      {renderContent()}
 
-            <div className="hidden md:flex items-center gap-6">
-              <button onClick={handleViewCatalog} className="text-gray-600 hover:text-gray-900">
-                Courses
-              </button>
-              <button onClick={handleViewAbout} className="text-gray-600 hover:text-gray-900">
-                About
-              </button>
-              <a href="#success" className="text-gray-600 hover:text-gray-900">
-                Success Stories
-              </a>
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                onClick={() => setShowLeadModal(true)}
-              >
-                Get Started
-              </button>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button className="md:hidden p-2">
-              <div className="w-6 h-6 flex flex-col justify-center gap-1">
-                <div className="w-full h-0.5 bg-gray-600"></div>
-                <div className="w-full h-0.5 bg-gray-600"></div>
-                <div className="w-full h-0.5 bg-gray-600"></div>
-              </div>
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main>
-        <HeroSection />
-        <ProblemSection />
-        <SolutionSection />
-        <SuccessStories />
-
-        {/* Inline Lead Capture Section */}
-        <section className="py-12 bg-gradient-to-r from-blue-600 to-purple-600">
-          <div className="container max-w-4xl mx-auto px-4">
-            <InlineLeadForm
-              title="Ready to Transform Your Career?"
-              subtitle="Join 5,000+ Nigerians who've downloaded our free career guide"
-              buttonText="Get Free Starter Pack"
-            />
-          </div>
-        </section>
-
-        <CourseCategories onViewCatalog={handleViewCatalog} />
-        <PricingSection />
-        <FinalCTA />
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container max-w-6xl mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <span className="text-xl font-bold">SpaceHub</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Empowering Nigerian youth with digital skills for global opportunities.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Courses</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <button onClick={handleViewCatalog} className="hover:text-white">
-                    Web Development
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleViewCatalog} className="hover:text-white">
-                    UI/UX Design
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleViewCatalog} className="hover:text-white">
-                    Data Science
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleViewCatalog} className="hover:text-white">
-                    Digital Marketing
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <button onClick={handleViewAbout} className="hover:text-white">
-                    About Us
-                  </button>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Success Stories
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Contact
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    FAQ
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>📧 hello@spacehub.ng</li>
-                <li>📱 +234 XXX XXX XXXX</li>
-                <li>📍 Lagos, Nigeria</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 SpaceHub. All rights reserved. Built for Nigerian youth, by Nigerian youth.</p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Lead Capture Components */}
-      <LeadCaptureModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} trigger="navigation" />
-      <ExitIntentPopup />
-      <FloatingCTA onOpenModal={() => setShowLeadModal(true)} />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onStudentLogin={handleStudentLogin}
+        onStaffLogin={handleStaffLogin}
+        onSignup={handleSignup}
+      />
     </div>
   )
 }
