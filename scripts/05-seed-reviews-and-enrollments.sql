@@ -1,69 +1,118 @@
--- Insert sample course reviews
-INSERT INTO course_reviews (course_id, student_id, rating, review_text, is_verified, created_at)
-SELECT 
-    c.id,
-    u.id,
-    review_rating,
-    review_text,
-    true,
-    CURRENT_TIMESTAMP - INTERVAL '1 day' * FLOOR(RANDOM() * 30)
-FROM courses c
-CROSS JOIN users u
-CROSS JOIN (
-    VALUES 
-        (5, 'This course changed my life! I went from knowing nothing about coding to landing a $2,500/month remote job. The instructor is excellent and the projects are real-world.'),
-        (5, 'The projects are incredibly practical and the mentorship is invaluable. I''m now working as a developer at a fintech startup. Highly recommended!'),
-        (4, 'Great course content and structure. The pace is perfect for beginners. Only wish there were more advanced topics covered.'),
-        (5, 'Outstanding course! The instructor explains complex concepts in simple terms. The community support is also amazing.'),
-        (4, 'Very comprehensive course. Learned so much in just a few months. The job placement support really works!')
-) AS reviews(review_rating, review_text)
-WHERE u.role = 'student' 
-AND RANDOM() < 0.3 -- Only 30% of students leave reviews
-LIMIT 50;
+-- Seed enrollments, reviews, and other data
 
 -- Insert sample enrollments
-INSERT INTO enrollments (student_id, course_id, enrollment_date, progress_percentage, is_completed)
+WITH student_refs AS (
+    SELECT id as user_id, first_name FROM users WHERE role = 'student'
+),
+course_refs AS (
+    SELECT id as course_id, title FROM courses
+)
+INSERT INTO enrollments (id, user_id, course_id, enrollment_date, progress_percentage, is_completed)
 SELECT 
-    u.id,
-    c.id,
-    CURRENT_TIMESTAMP - INTERVAL '1 day' * FLOOR(RANDOM() * 90),
+    uuid_generate_v4(),
+    sr.user_id,
+    cr.course_id,
+    CURRENT_TIMESTAMP - INTERVAL '30 days' * random(),
     CASE 
-        WHEN RANDOM() < 0.1 THEN 100.0 -- 10% completed
-        WHEN RANDOM() < 0.3 THEN RANDOM() * 100 -- 20% in progress
-        ELSE RANDOM() * 30 -- 70% just started
+        WHEN random() < 0.3 THEN 100.0
+        WHEN random() < 0.6 THEN 50.0 + random() * 50.0
+        ELSE random() * 50.0
     END,
-    RANDOM() < 0.1 -- 10% completion rate
-FROM users u
-CROSS JOIN courses c
-WHERE u.role = 'student'
-AND RANDOM() < 0.4 -- 40% of students are enrolled in each course
-LIMIT 100;
+    random() < 0.3
+FROM student_refs sr
+CROSS JOIN course_refs cr
+WHERE random() < 0.4; -- 40% chance of enrollment
 
--- Insert sample payments for enrollments
-INSERT INTO payments (user_id, course_id, payment_reference, amount, status, payment_date)
+-- Insert course reviews
+WITH enrollment_refs AS (
+    SELECT e.id as enrollment_id, e.user_id, e.course_id, e.is_completed
+    FROM enrollments e
+    WHERE e.progress_percentage > 20
+)
+INSERT INTO course_reviews (id, user_id, course_id, rating, review_text, is_published)
 SELECT 
-    e.student_id,
-    e.course_id,
-    'spacehub_' || EXTRACT(EPOCH FROM e.enrollment_date)::bigint || '_' || SUBSTRING(MD5(RANDOM()::text), 1, 9),
-    c.price,
-    'successful',
-    e.enrollment_date
-FROM enrollments e
-JOIN courses c ON e.course_id = c.id
-WHERE RANDOM() < 0.8; -- 80% of enrollments have successful payments
+    uuid_generate_v4(),
+    er.user_id,
+    er.course_id,
+    CASE 
+        WHEN random() < 0.6 THEN 5
+        WHEN random() < 0.8 THEN 4
+        WHEN random() < 0.95 THEN 3
+        ELSE 2
+    END,
+    CASE 
+        WHEN random() < 0.7 THEN 
+            (ARRAY[
+                'Excellent course! Very comprehensive and well-structured.',
+                'Great instructor and practical examples. Highly recommended!',
+                'Perfect for beginners. Clear explanations and good pacing.',
+                'Loved the hands-on projects. Really helped me understand the concepts.',
+                'Outstanding content quality. Worth every penny!',
+                'The instructor explains complex topics in a simple way.',
+                'Great course with lots of practical examples and exercises.'
+            ])[floor(random() * 7 + 1)]
+        ELSE NULL
+    END,
+    true
+FROM enrollment_refs er
+WHERE random() < 0.6; -- 60% of students with progress leave reviews
 
--- Insert sample leads from landing page
-INSERT INTO leads (email, first_name, last_name, phone, source, interests, created_at)
-VALUES 
-('prospect1@example.com', 'Michael', 'Johnson', '+2348012345678', 'hero_form', ARRAY['Web Development'], CURRENT_TIMESTAMP - INTERVAL '2 days'),
-('prospect2@example.com', 'Fatima', 'Abubakar', '+2348087654321', 'exit_intent', ARRAY['Design', 'Marketing'], CURRENT_TIMESTAMP - INTERVAL '1 day'),
-('prospect3@example.com', 'Chidi', 'Okonkwo', '+2348098765432', 'inline_form', ARRAY['Data Science'], CURRENT_TIMESTAMP - INTERVAL '3 hours'),
-('prospect4@example.com', 'Aisha', 'Bello', '+2348076543210', 'floating_cta', ARRAY['Web Development', 'Data Science'], CURRENT_TIMESTAMP - INTERVAL '5 hours'),
-('prospect5@example.com', 'Emeka', 'Nwankwo', '+2348065432109', 'hero_form', ARRAY['Marketing'], CURRENT_TIMESTAMP - INTERVAL '1 hour');
+-- Insert sample payments
+WITH enrollment_refs AS (
+    SELECT e.user_id, e.course_id, c.price
+    FROM enrollments e
+    JOIN courses c ON e.course_id = c.id
+)
+INSERT INTO payments (id, user_id, course_id, paystack_reference, amount, status, payment_method, transaction_date, verified_at)
+SELECT 
+    uuid_generate_v4(),
+    er.user_id,
+    er.course_id,
+    'ref_' || substr(md5(random()::text), 1, 10),
+    er.price,
+    'success',
+    (ARRAY['card', 'bank_transfer', 'ussd'])[floor(random() * 3 + 1)],
+    CURRENT_TIMESTAMP - INTERVAL '30 days' * random(),
+    CURRENT_TIMESTAMP - INTERVAL '30 days' * random() + INTERVAL '5 minutes'
+FROM enrollment_refs er;
 
--- Insert sample contact form submissions
-INSERT INTO contact_submissions (name, email, phone, subject, message, status, created_at)
-VALUES 
-('Blessing Okoro', 'blessing@example.com', '+2348012345678', 'Course Inquiry', 'I am interested in the web development bootcamp. Can you provide more information about the curriculum?', 'new', CURRENT_TIMESTAMP - INTERVAL '2 days'),
-('Ahmed Hassan', 'ahmed@example.com', '+2348087654321', 'Payment Issue', 'I made a payment but my course access is not activated. Please help.', 'in_progress', CURRENT_TIMESTAMP - INTERVAL '1 day'),
-('Grace Adebayo', 'grace@example.com', '+2348098765432', 'Partnership Opportunity', 'I represent a tech company interested in corporate training. Can we discuss partnership opportunities?', 'new', CURRENT_TIMESTAMP - INTERVAL '3 hours');
+-- Insert sample leads
+INSERT INTO leads (id, email, first_name, last_name, phone, source, interests)
+SELECT 
+    uuid_generate_v4(),
+    'lead' || generate_series || '@example.com',
+    (ARRAY['John', 'Jane', 'Mike', 'Sarah', 'David', 'Lisa', 'Chris', 'Emma'])[floor(random() * 8 + 1)],
+    (ARRAY['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'])[floor(random() * 8 + 1)],
+    '+234' || (7000000000 + floor(random() * 999999999))::text,
+    (ARRAY['landing_page', 'popup', 'footer', 'social_media'])[floor(random() * 4 + 1)],
+    (ARRAY[
+        ARRAY['web-development', 'programming'],
+        ARRAY['design', 'ui-ux'],
+        ARRAY['data-science', 'analytics'],
+        ARRAY['marketing', 'business'],
+        ARRAY['mobile-development', 'apps']
+    ])[floor(random() * 5 + 1)]
+FROM generate_series(1, 50);
+
+-- Insert sample contact submissions
+INSERT INTO contact_submissions (id, name, email, subject, message, status)
+SELECT 
+    uuid_generate_v4(),
+    (ARRAY['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson'])[floor(random() * 4 + 1)],
+    'contact' || generate_series || '@example.com',
+    (ARRAY[
+        'Course Inquiry',
+        'Technical Support',
+        'Partnership Opportunity',
+        'General Question',
+        'Refund Request'
+    ])[floor(random() * 5 + 1)],
+    (ARRAY[
+        'I am interested in learning more about your web development course.',
+        'I am having trouble accessing my course materials.',
+        'I would like to discuss a potential partnership.',
+        'Can you provide more information about your certification process?',
+        'I would like to request a refund for my recent purchase.'
+    ])[floor(random() * 5 + 1)],
+    (ARRAY['new', 'in_progress', 'resolved'])[floor(random() * 3 + 1)]
+FROM generate_series(1, 20);

@@ -1,116 +1,86 @@
--- Insert course lessons for each module
+-- Seed course modules and lessons
 
--- Web Development Course Lessons
-INSERT INTO course_lessons (module_id, title, description, content_type, video_url, video_duration_seconds, sort_order, is_free)
+-- Insert course modules
+WITH course_refs AS (
+    SELECT id as course_id, title FROM courses
+)
+INSERT INTO course_modules (id, course_id, title, description, order_index)
 SELECT 
-    cm.id,
-    lesson_title,
-    lesson_description,
-    'video',
-    'https://www.youtube.com/watch?v=' || video_id,
-    duration_seconds,
-    lesson_order,
-    is_free_lesson
-FROM course_modules cm
-JOIN courses c ON cm.course_id = c.id
-CROSS JOIN (
-    VALUES 
-        ('Introduction to HTML', 'Learn the basics of HTML structure and elements', 'dQw4w9WgXcQ', 1800, 1, true),
-        ('HTML Forms and Input Elements', 'Master form creation and validation', 'dQw4w9WgXcQ', 2400, 2, true),
-        ('CSS Fundamentals', 'Style your web pages with CSS', 'dQw4w9WgXcQ', 2100, 3, true),
-        ('CSS Flexbox and Grid', 'Create responsive layouts', 'dQw4w9WgXcQ', 2700, 4, false),
-        ('JavaScript Variables and Functions', 'Learn JavaScript programming basics', 'dQw4w9WgXcQ', 2400, 5, false),
-        ('DOM Manipulation', 'Make your pages interactive', 'dQw4w9WgXcQ', 2100, 6, false)
-) AS lessons(lesson_title, lesson_description, video_id, duration_seconds, lesson_order, is_free_lesson)
-WHERE c.slug = 'full-stack-web-development-bootcamp' AND cm.sort_order = 1
+    uuid_generate_v4(),
+    cr.course_id,
+    module_data.title,
+    module_data.description,
+    module_data.order_index
+FROM (VALUES
+    -- Web Development Course Modules
+    ('Complete Web Development Bootcamp', 'HTML & CSS Fundamentals', 'Learn the building blocks of web development', 1),
+    ('Complete Web Development Bootcamp', 'JavaScript Essentials', 'Master JavaScript programming concepts', 2),
+    ('Complete Web Development Bootcamp', 'React.js Frontend', 'Build modern user interfaces with React', 3),
+    ('Complete Web Development Bootcamp', 'Backend with Node.js', 'Create server-side applications', 4),
+    ('Complete Web Development Bootcamp', 'Database & Deployment', 'Store data and deploy your applications', 5),
+    
+    -- UI/UX Design Course Modules
+    ('UI/UX Design Masterclass', 'Design Principles', 'Fundamental design concepts and theory', 1),
+    ('UI/UX Design Masterclass', 'User Research', 'Understanding your users and their needs', 2),
+    ('UI/UX Design Masterclass', 'Figma Mastery', 'Complete guide to Figma design tool', 3),
+    ('UI/UX Design Masterclass', 'Prototyping', 'Create interactive prototypes', 4),
+    ('UI/UX Design Masterclass', 'Design Systems', 'Build scalable design systems', 5),
+    
+    -- Data Science Course Modules
+    ('Data Science with Python', 'Python Fundamentals', 'Python programming for data science', 1),
+    ('Data Science with Python', 'Data Analysis', 'Working with pandas and numpy', 2),
+    ('Data Science with Python', 'Data Visualization', 'Creating charts and graphs', 3),
+    ('Data Science with Python', 'Machine Learning', 'Building predictive models', 4),
+    ('Data Science with Python', 'Advanced Topics', 'Deep learning and advanced techniques', 5)
+) AS module_data(course_title, title, description, order_index)
+JOIN course_refs cr ON cr.title = module_data.course_title;
 
-UNION ALL
-
+-- Insert course lessons
+WITH module_refs AS (
+    SELECT cm.id as module_id, cm.title as module_title, c.title as course_title 
+    FROM course_modules cm 
+    JOIN courses c ON cm.course_id = c.id
+)
+INSERT INTO course_lessons (id, module_id, title, description, content_type, video_url, video_duration, order_index, is_free)
 SELECT 
-    cm.id,
-    lesson_title,
-    lesson_description,
+    uuid_generate_v4(),
+    mr.module_id,
+    lesson_data.title,
+    lesson_data.description,
     'video',
-    'https://www.youtube.com/watch?v=' || video_id,
-    duration_seconds,
-    lesson_order,
-    is_free_lesson
-FROM course_modules cm
-JOIN courses c ON cm.course_id = c.id
-CROSS JOIN (
-    VALUES 
-        ('React Components and JSX', 'Build your first React components', 'dQw4w9WgXcQ', 2700, 1, false),
-        ('State Management with Hooks', 'Manage component state effectively', 'dQw4w9WgXcQ', 3000, 2, false),
-        ('React Router for Navigation', 'Create multi-page applications', 'dQw4w9WgXcQ', 2400, 3, false),
-        ('API Integration', 'Connect your app to external APIs', 'dQw4w9WgXcQ', 2700, 4, false)
-) AS lessons(lesson_title, lesson_description, video_id, duration_seconds, lesson_order, is_free_lesson)
-WHERE c.slug = 'full-stack-web-development-bootcamp' AND cm.sort_order = 2;
-
--- Design Course Lessons
-INSERT INTO course_lessons (module_id, title, description, content_type, video_url, video_duration_seconds, sort_order, is_free)
-SELECT 
-    cm.id,
-    lesson_title,
-    lesson_description,
-    'video',
-    'https://www.youtube.com/watch?v=' || video_id,
-    duration_seconds,
-    lesson_order,
-    is_free_lesson
-FROM course_modules cm
-JOIN courses c ON cm.course_id = c.id
-CROSS JOIN (
-    VALUES 
-        ('Design Principles Overview', 'Understanding fundamental design principles', 'dQw4w9WgXcQ', 1800, 1, true),
-        ('Color Theory and Psychology', 'Master color in design', 'dQw4w9WgXcQ', 2100, 2, true),
-        ('Typography Fundamentals', 'Choose and pair fonts effectively', 'dQw4w9WgXcQ', 1800, 3, true),
-        ('Layout and Composition', 'Create balanced and engaging layouts', 'dQw4w9WgXcQ', 2400, 4, false),
-        ('Visual Hierarchy', 'Guide user attention through design', 'dQw4w9WgXcQ', 1800, 5, false)
-) AS lessons(lesson_title, lesson_description, video_id, duration_seconds, lesson_order, is_free_lesson)
-WHERE c.slug = 'digital-product-design-mastery' AND cm.sort_order = 1;
-
--- Data Science Course Lessons
-INSERT INTO course_lessons (module_id, title, description, content_type, video_url, video_duration_seconds, sort_order, is_free)
-SELECT 
-    cm.id,
-    lesson_title,
-    lesson_description,
-    'video',
-    'https://www.youtube.com/watch?v=' || video_id,
-    duration_seconds,
-    lesson_order,
-    is_free_lesson
-FROM course_modules cm
-JOIN courses c ON cm.course_id = c.id
-CROSS JOIN (
-    VALUES 
-        ('Python Installation and Setup', 'Get your development environment ready', 'dQw4w9WgXcQ', 1200, 1, true),
-        ('Python Syntax and Variables', 'Learn Python programming basics', 'dQw4w9WgXcQ', 1800, 2, true),
-        ('Data Types and Structures', 'Work with lists, dictionaries, and more', 'dQw4w9WgXcQ', 2100, 3, true),
-        ('Control Flow and Functions', 'Write efficient Python code', 'dQw4w9WgXcQ', 2400, 4, false),
-        ('Working with Libraries', 'Import and use Python libraries', 'dQw4w9WgXcQ', 1800, 5, false)
-) AS lessons(lesson_title, lesson_description, video_id, duration_seconds, lesson_order, is_free_lesson)
-WHERE c.slug = 'data-science-for-business' AND cm.sort_order = 1;
-
--- Marketing Course Lessons
-INSERT INTO course_lessons (module_id, title, description, content_type, video_url, video_duration_seconds, sort_order, is_free)
-SELECT 
-    cm.id,
-    lesson_title,
-    lesson_description,
-    'video',
-    'https://www.youtube.com/watch?v=' || video_id,
-    duration_seconds,
-    lesson_order,
-    is_free_lesson
-FROM course_modules cm
-JOIN courses c ON cm.course_id = c.id
-CROSS JOIN (
-    VALUES 
-        ('Social Media Marketing Overview', 'Introduction to social media marketing', 'dQw4w9WgXcQ', 1500, 1, true),
-        ('Platform-Specific Strategies', 'Tailor content for each platform', 'dQw4w9WgXcQ', 1800, 2, true),
-        ('Building Your Brand Voice', 'Develop consistent brand messaging', 'dQw4w9WgXcQ', 1500, 3, true),
-        ('Community Management', 'Engage with your audience effectively', 'dQw4w9WgXcQ', 2100, 4, false),
-        ('Social Media Analytics', 'Measure your social media success', 'dQw4w9WgXcQ', 1800, 5, false)
-) AS lessons(lesson_title, lesson_description, video_id, duration_seconds, lesson_order, is_free_lesson)
-WHERE c.slug = 'social-media-marketing-pro' AND cm.sort_order = 1;
+    lesson_data.video_url,
+    lesson_data.duration,
+    lesson_data.order_index,
+    lesson_data.is_free
+FROM (VALUES
+    -- HTML & CSS Fundamentals lessons
+    ('HTML & CSS Fundamentals', 'Introduction to HTML', 'Learn HTML structure and basic tags', 'https://www.youtube.com/watch?v=UB1O30fR-EE', 1200, 1, true),
+    ('HTML & CSS Fundamentals', 'CSS Styling Basics', 'Style your HTML with CSS', 'https://www.youtube.com/watch?v=yfoY53QXEnI', 1500, 2, true),
+    ('HTML & CSS Fundamentals', 'Responsive Design', 'Make your websites mobile-friendly', 'https://www.youtube.com/watch?v=srvUrASNdxk', 1800, 3, true),
+    ('HTML & CSS Fundamentals', 'CSS Grid and Flexbox', 'Modern layout techniques', 'https://www.youtube.com/watch?v=jV8B24rSN5o', 2100, 4, false),
+    
+    -- JavaScript Essentials lessons
+    ('JavaScript Essentials', 'JavaScript Basics', 'Variables, functions, and control flow', 'https://www.youtube.com/watch?v=hdI2bqOjy3c', 1800, 1, true),
+    ('JavaScript Essentials', 'DOM Manipulation', 'Interact with HTML elements', 'https://www.youtube.com/watch?v=0ik6X4DJKCc', 2000, 2, false),
+    ('JavaScript Essentials', 'Async JavaScript', 'Promises, async/await, and APIs', 'https://www.youtube.com/watch?v=PoRJizFvM7s', 2200, 3, false),
+    ('JavaScript Essentials', 'ES6+ Features', 'Modern JavaScript features', 'https://www.youtube.com/watch?v=nZ1DMMsyVyI', 1900, 4, false),
+    
+    -- React.js Frontend lessons
+    ('React.js Frontend', 'React Introduction', 'Getting started with React', 'https://www.youtube.com/watch?v=Ke90Tje7VS0', 1600, 1, true),
+    ('React.js Frontend', 'Components and Props', 'Building reusable components', 'https://www.youtube.com/watch?v=9D1x7-2FmTA', 1800, 2, false),
+    ('React.js Frontend', 'State and Hooks', 'Managing component state', 'https://www.youtube.com/watch?v=O6P86uwfdR0', 2100, 3, false),
+    ('React.js Frontend', 'React Router', 'Navigation in React apps', 'https://www.youtube.com/watch?v=Law7wfdg_ls', 1700, 4, false),
+    
+    -- Design Principles lessons
+    ('Design Principles', 'Color Theory', 'Understanding color in design', 'https://www.youtube.com/watch?v=_2LLXnUdUIc', 1400, 1, true),
+    ('Design Principles', 'Typography', 'Choosing and using fonts effectively', 'https://www.youtube.com/watch?v=sByzHoiYFX0', 1600, 2, true),
+    ('Design Principles', 'Layout and Composition', 'Arranging elements effectively', 'https://www.youtube.com/watch?v=a5KYlHNKQB8', 1800, 3, true),
+    ('Design Principles', 'Visual Hierarchy', 'Guiding user attention', 'https://www.youtube.com/watch?v=qZWDJqY27bw', 1500, 4, false),
+    
+    -- Python Fundamentals lessons
+    ('Python Fundamentals', 'Python Basics', 'Variables, data types, and syntax', 'https://www.youtube.com/watch?v=rfscVS0vtbw', 2000, 1, true),
+    ('Python Fundamentals', 'Control Structures', 'Loops and conditional statements', 'https://www.youtube.com/watch?v=6iF8Xb7Z3wQ', 1800, 2, true),
+    ('Python Fundamentals', 'Functions and Modules', 'Organizing your Python code', 'https://www.youtube.com/watch?v=9Os0o3wzS_I', 2100, 3, true),
+    ('Python Fundamentals', 'File Handling', 'Working with files in Python', 'https://www.youtube.com/watch?v=Uh2ebFW8OYM', 1700, 4, false)
+) AS lesson_data(module_title, title, description, video_url, duration, order_index, is_free)
+JOIN module_refs mr ON mr.module_title = lesson_data.module_title;
