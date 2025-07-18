@@ -4,130 +4,213 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { CheckCircle, CreditCard, Users, Clock, Star } from "lucide-react"
-import { CourseCheckout } from "./course-checkout"
-import { PaymentSuccess } from "./payment-success"
-import { courses, formatNaira, type Course } from "../lib/paystack"
+import { Check, Star, Users, Clock, Award, Zap } from "lucide-react"
+import { formatNaira } from "../lib/paystack"
+import { sampleCourses } from "../lib/courses-data"
 
-export function PricingSection() {
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
-  const [showCheckout, setShowCheckout] = useState(false)
-  const [paymentSuccess, setPaymentSuccess] = useState<{
-    reference: string
-    course: Course
-    amount: string
-  } | null>(null)
+interface PricingSectionProps {
+  onEnrollClick?: (courseId: string) => void
+}
 
-  const handleEnrollClick = (course: Course) => {
-    setSelectedCourse(course)
-    setShowCheckout(true)
-  }
+export function PricingSection({ onEnrollClick }: PricingSectionProps) {
+  const [selectedPlan, setSelectedPlan] = useState<"basic" | "premium" | "pro">("premium")
 
-  const handlePaymentSuccess = (reference: string) => {
-    if (selectedCourse) {
-      setPaymentSuccess({
-        reference,
-        course: selectedCourse,
-        amount: formatNaira(selectedCourse.price * 0.9), // Assuming full payment with discount
-      })
-      setShowCheckout(false)
-    }
-  }
+  const plans = [
+    {
+      id: "basic",
+      name: "Basic Plan",
+      description: "Perfect for beginners starting their learning journey",
+      price: 50000,
+      originalPrice: 75000,
+      duration: "3 months access",
+      popular: false,
+      features: [
+        "Access to 5 beginner courses",
+        "Basic community access",
+        "Email support",
+        "Mobile app access",
+        "Basic certificates",
+        "Self-paced learning",
+      ],
+      limitations: ["No live sessions", "Limited mentor access", "No career guidance"],
+    },
+    {
+      id: "premium",
+      name: "Premium Plan",
+      description: "Most popular choice for serious learners",
+      price: 120000,
+      originalPrice: 180000,
+      duration: "6 months access",
+      popular: true,
+      features: [
+        "Access to ALL courses",
+        "Live weekly sessions",
+        "Priority community access",
+        "1-on-1 mentor sessions (2/month)",
+        "Premium certificates",
+        "Career guidance",
+        "Project reviews",
+        "Job placement assistance",
+        "Mobile + desktop access",
+        "Downloadable resources",
+      ],
+      limitations: [],
+    },
+    {
+      id: "pro",
+      name: "Pro Plan",
+      description: "For professionals seeking advanced skills",
+      price: 200000,
+      originalPrice: 300000,
+      duration: "12 months access",
+      popular: false,
+      features: [
+        "Everything in Premium",
+        "Unlimited mentor sessions",
+        "Advanced project portfolio",
+        "Industry expert sessions",
+        "Internship opportunities",
+        "LinkedIn profile optimization",
+        "Resume review service",
+        "Interview preparation",
+        "Networking events access",
+        "Lifetime community access",
+        "Advanced certificates",
+        "Priority job referrals",
+      ],
+      limitations: [],
+    },
+  ]
 
-  const handleCloseSuccess = () => {
-    setPaymentSuccess(null)
-    setSelectedCourse(null)
-  }
+  const featuredCourses = sampleCourses.filter((course) => course.is_featured).slice(0, 3)
 
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="container max-w-6xl mx-auto px-4">
+    <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+      <div className="container max-w-7xl mx-auto px-4">
+        {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-            Invest in Your{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Future Today
-            </span>
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Choose the course that fits your goals. All courses include lifetime access and job placement support.
+          <Badge className="mb-4 bg-blue-100 text-blue-800 hover:bg-blue-100">💰 Special Launch Pricing</Badge>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Choose Your Learning Path</h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Invest in your future with our comprehensive learning plans. All plans include lifetime access to course
+            materials and our supportive community.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 mb-12">
-          {courses.map((course) => (
-            <Card key={course.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 relative">
-              {course.id === "ui-ux" && (
-                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-orange-500 hover:bg-orange-600">
-                  Most Popular
-                </Badge>
+        {/* Pricing Cards */}
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          {plans.map((plan) => (
+            <Card
+              key={plan.id}
+              className={`relative transition-all duration-300 hover:shadow-xl ${
+                plan.popular ? "border-blue-500 shadow-lg scale-105 bg-white" : "border-gray-200 hover:border-blue-300"
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <Badge className="bg-blue-600 text-white px-4 py-1 text-sm font-semibold">🔥 Most Popular</Badge>
+                </div>
               )}
 
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge variant="secondary">{course.category}</Badge>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium">4.9</span>
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</CardTitle>
+                <p className="text-gray-600 mb-4">{plan.description}</p>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-4xl font-bold text-gray-900">{formatNaira(plan.price)}</span>
+                    <span className="text-lg text-gray-500 line-through">{formatNaira(plan.originalPrice)}</span>
                   </div>
+                  <p className="text-sm text-gray-600">{plan.duration}</p>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    Save {Math.round(((plan.originalPrice - plan.price) / plan.originalPrice) * 100)}%
+                  </Badge>
                 </div>
-                <CardTitle className="text-xl mb-2">{course.title}</CardTitle>
-                <p className="text-gray-600 text-sm">{course.description}</p>
               </CardHeader>
 
               <CardContent className="space-y-6">
-                {/* Course Stats */}
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {course.duration}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    450+ students
-                  </span>
-                </div>
-
                 {/* Features */}
                 <div>
-                  <h4 className="font-semibold mb-3">What You'll Get:</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">What's Included:</h4>
                   <ul className="space-y-2">
-                    {course.features.slice(0, 3).map((feature, index) => (
+                    {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span>{feature}</span>
+                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-700">{feature}</span>
                       </li>
                     ))}
-                    {course.features.length > 3 && (
-                      <li className="text-sm text-gray-500 ml-6">+{course.features.length - 3} more features</li>
-                    )}
                   </ul>
                 </div>
 
-                {/* Pricing */}
-                <div className="space-y-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-gray-900">{formatNaira(course.price * 0.9)}</span>
-                    <span className="text-lg text-gray-500 line-through">{formatNaira(course.price)}</span>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      Save 10%
-                    </Badge>
+                {/* Limitations */}
+                {plan.limitations.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Limitations:</h4>
+                    <ul className="space-y-2">
+                      {plan.limitations.map((limitation, index) => (
+                        <li key={index} className="flex items-start gap-2 text-sm">
+                          <span className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0">×</span>
+                          <span className="text-gray-600">{limitation}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    Or pay {formatNaira(Math.ceil(course.price / 6))}/month for 6 months
-                  </p>
-                </div>
+                )}
 
-                {/* CTA Button */}
-                <Button onClick={() => handleEnrollClick(course)} className="w-full bg-blue-600 hover:bg-blue-700 py-3">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Enroll Now
+                <Button
+                  className={`w-full py-3 text-lg font-semibold transition-all duration-300 ${
+                    plan.popular
+                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
+                      : "bg-gray-900 hover:bg-gray-800 text-white"
+                  }`}
+                  onClick={() => onEnrollClick?.(plan.id)}
+                >
+                  {plan.popular ? "🚀 Get Started Now" : "Choose Plan"}
                 </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-                {/* Guarantee */}
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">🛡️ 30-day money-back guarantee</p>
+        {/* Featured Courses Preview */}
+        <div className="text-center mb-12">
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">Featured Courses Included</h3>
+          <p className="text-gray-600 mb-8">Get access to these high-demand courses and many more</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 mb-16">
+          {featuredCourses.map((course) => (
+            <Card
+              key={course.id}
+              className="border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-lg"
+            >
+              <CardHeader className="pb-3">
+                <img
+                  src={course.thumbnail_url || "/placeholder.svg"}
+                  alt={course.title}
+                  className="w-full h-32 object-cover rounded-lg mb-3"
+                />
+                <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">{course.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {course.duration_hours}h
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    {course.enrollment_count}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    {course.rating}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 line-clamp-2 mb-3">{course.short_description}</p>
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary">{course.level}</Badge>
+                  <span className="text-lg font-bold text-gray-900">{formatNaira(course.price)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -135,53 +218,48 @@ export function PricingSection() {
         </div>
 
         {/* Trust Indicators */}
-        <div className="text-center">
-          <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-600 mb-6">
-            <span className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              Secure Payment with Paystack
-            </span>
-            <span className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              30-Day Money-Back Guarantee
-            </span>
-            <span className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              Lifetime Course Access
-            </span>
+        <div className="bg-white rounded-2xl p-8 shadow-lg">
+          <div className="grid md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">5,000+</div>
+              <div className="text-sm text-gray-600">Happy Students</div>
+            </div>
+            <div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Award className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">95%</div>
+              <div className="text-sm text-gray-600">Success Rate</div>
+            </div>
+            <div>
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Zap className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">24/7</div>
+              <div className="text-sm text-gray-600">Support</div>
+            </div>
+            <div>
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Star className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">4.9/5</div>
+              <div className="text-sm text-gray-600">Average Rating</div>
+            </div>
           </div>
+        </div>
 
-          <p className="text-gray-500 text-sm">Trusted by 2,000+ Nigerian students • 85% job placement rate</p>
+        {/* Money Back Guarantee */}
+        <div className="text-center mt-12">
+          <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-6 py-3 rounded-full">
+            <Check className="w-5 h-5" />
+            <span className="font-semibold">30-Day Money-Back Guarantee</span>
+          </div>
+          <p className="text-gray-600 mt-2">Not satisfied? Get a full refund within 30 days. No questions asked.</p>
         </div>
       </div>
-
-      {/* Checkout Modal */}
-      <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
-          {selectedCourse && (
-            <CourseCheckout
-              course={selectedCourse}
-              onSuccess={handlePaymentSuccess}
-              onClose={() => setShowCheckout(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Success Modal */}
-      <Dialog open={!!paymentSuccess} onOpenChange={() => setPaymentSuccess(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-          {paymentSuccess && (
-            <PaymentSuccess
-              reference={paymentSuccess.reference}
-              courseName={paymentSuccess.course.title}
-              customerEmail="user@example.com" // This would come from the form
-              amount={paymentSuccess.amount}
-              onContinue={handleCloseSuccess}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </section>
   )
 }

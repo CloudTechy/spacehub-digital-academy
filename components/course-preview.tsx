@@ -1,287 +1,134 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Play, Lock, CheckCircle, Clock, Users, Star, ArrowLeft, BookOpen } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Play, Lock, CheckCircle, Clock, Users, Star, ArrowLeft, BookOpen, Award, Download, Eye } from "lucide-react"
+import { useApi } from "../lib/api"
+import { usePaystack, formatNaira } from "../lib/paystack"
+import { useInView } from "../lib/animations"
 
 interface CoursePreviewProps {
-  courseId: string
+  courseId: string | null
   onBack: () => void
-  onEnroll: () => void
+  onAuthRequest: (type: "student" | "staff") => void
 }
 
-export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps) {
-  const [activeTab, setActiveTab] = useState("overview")
-  const [playingVideo, setPlayingVideo] = useState<string | null>(null)
+export function CoursePreview({ courseId, onBack, onAuthRequest }: CoursePreviewProps) {
+  const [course, setCourse] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [showVideoModal, setShowVideoModal] = useState(false)
+  const [selectedVideo, setSelectedVideo] = useState<any>(null)
+  const [enrolling, setEnrolling] = useState(false)
 
-  // Sample course data - in real app, this would come from API
-  const courseData = {
-    "web-development": {
-      title: "Full-Stack Web Development Bootcamp",
-      instructor: "David Okafor",
-      instructorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-      rating: 4.9,
-      students: 1247,
-      duration: "12 weeks",
-      level: "Beginner to Advanced",
-      price: "₦150,000",
-      originalPrice: "₦200,000",
-      image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&h=400&fit=crop",
-      description:
-        "Master modern web development with React, Node.js, and MongoDB. Build real-world projects and launch your tech career.",
-      whatYouLearn: [
-        "HTML5, CSS3, and JavaScript fundamentals",
-        "React.js and modern frontend development",
-        "Node.js and Express.js backend development",
-        "MongoDB database design and management",
-        "RESTful API development",
-        "Authentication and security best practices",
-        "Deployment and DevOps basics",
-        "Portfolio projects and career guidance",
-      ],
-      curriculum: [
-        {
-          module: "Module 1: Web Development Fundamentals",
-          duration: "2 weeks",
-          lessons: [
-            { title: "Introduction to Web Development", duration: "45 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "HTML5 Essentials", duration: "60 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "CSS3 Styling and Layout", duration: "75 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "JavaScript Fundamentals", duration: "90 min", free: false },
-            { title: "DOM Manipulation", duration: "60 min", free: false },
-            { title: "Project: Personal Portfolio", duration: "120 min", free: false },
-          ],
-        },
-        {
-          module: "Module 2: Modern JavaScript & React",
-          duration: "3 weeks",
-          lessons: [
-            { title: "ES6+ Features", duration: "60 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Introduction to React", duration: "75 min", free: false },
-            { title: "Components and Props", duration: "60 min", free: false },
-            { title: "State Management with Hooks", duration: "90 min", free: false },
-            { title: "React Router", duration: "45 min", free: false },
-            { title: "Project: React Todo App", duration: "150 min", free: false },
-          ],
-        },
-        {
-          module: "Module 3: Backend Development",
-          duration: "3 weeks",
-          lessons: [
-            { title: "Node.js Fundamentals", duration: "60 min", free: false },
-            { title: "Express.js Framework", duration: "75 min", free: false },
-            { title: "RESTful API Design", duration: "90 min", free: false },
-            { title: "Database Integration", duration: "60 min", free: false },
-            { title: "Authentication & Authorization", duration: "90 min", free: false },
-            { title: "Project: Full-Stack App", duration: "180 min", free: false },
-          ],
-        },
-        {
-          module: "Module 4: Advanced Topics & Deployment",
-          duration: "4 weeks",
-          lessons: [
-            { title: "Testing and Debugging", duration: "60 min", free: false },
-            { title: "Performance Optimization", duration: "75 min", free: false },
-            { title: "Deployment Strategies", duration: "60 min", free: false },
-            { title: "DevOps Basics", duration: "90 min", free: false },
-            { title: "Career Guidance", duration: "45 min", free: false },
-            { title: "Final Capstone Project", duration: "300 min", free: false },
-          ],
-        },
-      ],
-      requirements: [
-        "Basic computer literacy",
-        "No prior programming experience required",
-        "Reliable internet connection",
-        "Computer with modern web browser",
-      ],
-      features: [
-        "24/7 access to course materials",
-        "Live coding sessions",
-        "1-on-1 mentorship",
-        "Career placement assistance",
-        "Certificate of completion",
-        "Lifetime access to updates",
-      ],
-    },
-    "ui-ux-design": {
-      title: "UI/UX Design Mastery",
-      instructor: "Sarah Adebayo",
-      instructorAvatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
-      rating: 4.8,
-      students: 892,
-      duration: "10 weeks",
-      level: "Beginner to Intermediate",
-      price: "₦120,000",
-      originalPrice: "₦160,000",
-      image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=400&fit=crop",
-      description:
-        "Learn to create beautiful, user-centered designs. Master Figma, design systems, and user research methodologies.",
-      whatYouLearn: [
-        "Design thinking and user research",
-        "Figma and design tools mastery",
-        "Typography and color theory",
-        "Wireframing and prototyping",
-        "Design systems and components",
-        "Usability testing and iteration",
-        "Mobile and responsive design",
-        "Portfolio development",
-      ],
-      curriculum: [
-        {
-          module: "Module 1: Design Fundamentals",
-          duration: "2 weeks",
-          lessons: [
-            { title: "Introduction to UI/UX Design", duration: "40 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Design Thinking Process", duration: "55 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Typography Essentials", duration: "60 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Color Theory and Psychology", duration: "50 min", free: false },
-            { title: "Layout and Composition", duration: "65 min", free: false },
-          ],
-        },
-        {
-          module: "Module 2: User Research & Strategy",
-          duration: "2 weeks",
-          lessons: [
-            { title: "User Research Methods", duration: "70 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Creating User Personas", duration: "45 min", free: false },
-            { title: "User Journey Mapping", duration: "60 min", free: false },
-            { title: "Information Architecture", duration: "55 min", free: false },
-          ],
-        },
-        {
-          module: "Module 3: Design Tools & Prototyping",
-          duration: "3 weeks",
-          lessons: [
-            { title: "Figma Mastery", duration: "90 min", free: false },
-            { title: "Wireframing Techniques", duration: "60 min", free: false },
-            { title: "High-Fidelity Prototyping", duration: "75 min", free: false },
-            { title: "Interactive Prototypes", duration: "80 min", free: false },
-          ],
-        },
-        {
-          module: "Module 4: Advanced Design & Portfolio",
-          duration: "3 weeks",
-          lessons: [
-            { title: "Design Systems", duration: "85 min", free: false },
-            { title: "Mobile Design Patterns", duration: "70 min", free: false },
-            { title: "Usability Testing", duration: "60 min", free: false },
-            { title: "Portfolio Development", duration: "120 min", free: false },
-          ],
-        },
-      ],
-      requirements: [
-        "Creative mindset and attention to detail",
-        "Basic computer skills",
-        "No design experience required",
-        "Access to design software (Figma is free)",
-      ],
-      features: [
-        "Industry-standard design tools",
-        "Real client projects",
-        "Design critique sessions",
-        "Portfolio review and feedback",
-        "Job placement assistance",
-        "Design community access",
-      ],
-    },
-    "data-science": {
-      title: "Data Science & Analytics",
-      instructor: "Michael Okafor",
-      instructorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-      rating: 4.7,
-      students: 634,
-      duration: "14 weeks",
-      level: "Intermediate",
-      price: "₦180,000",
-      originalPrice: "₦240,000",
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop",
-      description:
-        "Master data science with Python, machine learning, and statistical analysis. Work with real datasets and build predictive models.",
-      whatYouLearn: [
-        "Python programming for data science",
-        "Statistical analysis and hypothesis testing",
-        "Data visualization with matplotlib and seaborn",
-        "Machine learning algorithms",
-        "Deep learning fundamentals",
-        "Big data tools and techniques",
-        "Business intelligence and reporting",
-        "Real-world project portfolio",
-      ],
-      curriculum: [
-        {
-          module: "Module 1: Python & Statistics Foundation",
-          duration: "3 weeks",
-          lessons: [
-            { title: "Python for Data Science", duration: "60 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "NumPy and Pandas", duration: "75 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Statistical Concepts", duration: "90 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Probability Distributions", duration: "60 min", free: false },
-            { title: "Hypothesis Testing", duration: "75 min", free: false },
-          ],
-        },
-        {
-          module: "Module 2: Data Analysis & Visualization",
-          duration: "3 weeks",
-          lessons: [
-            { title: "Exploratory Data Analysis", duration: "80 min", free: true, videoId: "dQw4w9WgXcQ" },
-            { title: "Data Cleaning Techniques", duration: "70 min", free: false },
-            { title: "Matplotlib Visualization", duration: "60 min", free: false },
-            { title: "Seaborn Advanced Plots", duration: "65 min", free: false },
-          ],
-        },
-        {
-          module: "Module 3: Machine Learning",
-          duration: "4 weeks",
-          lessons: [
-            { title: "ML Fundamentals", duration: "90 min", free: false },
-            { title: "Supervised Learning", duration: "100 min", free: false },
-            { title: "Unsupervised Learning", duration: "85 min", free: false },
-            { title: "Model Evaluation", duration: "75 min", free: false },
-          ],
-        },
-        {
-          module: "Module 4: Advanced Topics & Projects",
-          duration: "4 weeks",
-          lessons: [
-            { title: "Deep Learning Basics", duration: "120 min", free: false },
-            { title: "Big Data Tools", duration: "90 min", free: false },
-            { title: "Business Intelligence", duration: "75 min", free: false },
-            { title: "Capstone Project", duration: "240 min", free: false },
-          ],
-        },
-      ],
-      requirements: [
-        "Basic programming knowledge helpful",
-        "Strong mathematical foundation",
-        "Analytical thinking skills",
-        "Computer with Python environment",
-      ],
-      features: [
-        "Real industry datasets",
-        "Jupyter notebook environments",
-        "ML model deployment",
-        "Industry mentor sessions",
-        "Data science portfolio",
-        "Job referral network",
-      ],
-    },
+  const api = useApi()
+  const { makePayment } = usePaystack()
+  const [sectionRef, sectionInView] = useInView()
+
+  useEffect(() => {
+    if (courseId) {
+      loadCourse()
+    }
+  }, [courseId])
+
+  const loadCourse = async () => {
+    try {
+      setLoading(true)
+      const response = await api.getCourse(courseId!)
+
+      if (response.success) {
+        setCourse(response.course)
+      }
+    } catch (error) {
+      console.error("Failed to load course:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const course = courseData[courseId as keyof typeof courseData]
-  if (!course) return null
+  const handleVideoPlay = (lesson: any) => {
+    if (lesson.is_free && lesson.video_url) {
+      setSelectedVideo(lesson)
+      setShowVideoModal(true)
+    }
+  }
 
-  const totalLessons = course.curriculum.reduce((acc, module) => acc + module.lessons.length, 0)
-  const freeLessons = course.curriculum.reduce(
-    (acc, module) => acc + module.lessons.filter((lesson) => lesson.free).length,
-    0,
-  )
+  const handleEnroll = async () => {
+    try {
+      setEnrolling(true)
+
+      // Initialize payment
+      const paymentResult = await makePayment(
+        course.price,
+        "student@example.com", // This should come from user context
+        {
+          course_id: course.id,
+          course_title: course.title,
+          student_name: "Student Name", // This should come from user context
+        },
+        async (response) => {
+          // Payment successful, enroll student
+          try {
+            const enrollResponse = await api.enrollInCourse(course.id)
+            if (enrollResponse.success) {
+              alert("Enrollment successful! Welcome to the course.")
+              onBack()
+            }
+          } catch (error) {
+            console.error("Enrollment failed:", error)
+            alert("Payment successful but enrollment failed. Please contact support.")
+          }
+        },
+        () => {
+          console.log("Payment cancelled")
+        },
+      )
+
+      if (!paymentResult.success) {
+        alert("Failed to initialize payment. Please try again.")
+      }
+    } catch (error) {
+      console.error("Enrollment error:", error)
+      alert("Failed to process enrollment. Please try again.")
+    } finally {
+      setEnrolling(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Course not found</h2>
+          <Button onClick={onBack}>Back to Courses</Button>
+        </div>
+      </div>
+    )
+  }
+
+  const totalLessons = course.modules?.reduce((acc: number, module: any) => acc + (module.lessons?.length || 0), 0) || 0
+  const freeLessons =
+    course.modules?.reduce(
+      (acc: number, module: any) => acc + (module.lessons?.filter((lesson: any) => lesson.is_free)?.length || 0),
+      0,
+    ) || 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div ref={sectionRef} className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
         <div className="container max-w-6xl mx-auto px-4 py-4">
@@ -297,47 +144,141 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Course Header */}
-            <div>
+            <div
+              className={`transition-all duration-1000 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+            >
               <img
-                src={course.image || "/placeholder.svg"}
+                src={course.thumbnail_url || "/placeholder.svg?height=400&width=800"}
                 alt={course.title}
-                className="w-full h-64 object-cover rounded-lg mb-6"
+                className="w-full h-64 object-cover rounded-2xl mb-6 shadow-lg"
               />
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{course.title}</h1>
-              <p className="text-lg text-gray-600 mb-6">{course.description}</p>
 
-              <div className="flex items-center gap-6 mb-6">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={course.instructorAvatar || "/placeholder.svg"}
-                    alt={course.instructor}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <span className="font-medium">{course.instructor}</span>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {course.is_featured && <Badge className="bg-orange-500 hover:bg-orange-600">Featured</Badge>}
+                  <Badge variant="outline">{course.level}</Badge>
+                  <Badge className="bg-green-100 text-green-800">{freeLessons} Free Lessons</Badge>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{course.rating}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <span>{course.students.toLocaleString()} students</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <span>{course.duration}</span>
+
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900">{course.title}</h1>
+                <p className="text-lg text-gray-600">{course.description}</p>
+
+                <div className="flex flex-wrap items-center gap-6 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="font-medium">{course.rating}</span>
+                    <span className="text-gray-500">({course.total_reviews} reviews)</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <Users className="h-4 w-4" />
+                    <span>{course.enrollment_count?.toLocaleString()} students</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <Clock className="h-4 w-4" />
+                    <span>{course.duration_hours} hours</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <BookOpen className="h-4 w-4" />
+                    <span>{totalLessons} lessons</span>
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* Free Preview Alert */}
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <Eye className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-green-800 mb-2">Free Course Preview Available!</h3>
+                    <p className="text-green-700 mb-4">
+                      Get a taste of what you'll learn with {freeLessons} free lessons. No credit card required.
+                    </p>
+                    <div className="flex items-center gap-4 text-sm text-green-600">
+                      <span>✓ {freeLessons} free video lessons</span>
+                      <span>✓ Course materials preview</span>
+                      <span>✓ Community access</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs defaultValue="curriculum" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="instructor">Instructor</TabsTrigger>
                 <TabsTrigger value="reviews">Reviews</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="curriculum" className="space-y-6">
+                <div className="mb-4">
+                  <p className="text-gray-600">
+                    {course.modules?.length || 0} modules • {totalLessons} lessons • {freeLessons} free preview lessons
+                  </p>
+                </div>
+
+                {course.modules?.map((module: any, moduleIndex: number) => (
+                  <Card key={module.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>
+                          Module {moduleIndex + 1}: {module.title}
+                        </span>
+                        <Badge variant="outline">{module.lessons?.length || 0} lessons</Badge>
+                      </CardTitle>
+                      {module.description && <p className="text-gray-600">{module.description}</p>}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {module.lessons?.map((lesson: any, lessonIndex: number) => (
+                          <div
+                            key={lesson.id}
+                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              {lesson.is_free ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleVideoPlay(lesson)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Play className="h-4 w-4" />
+                                  Preview
+                                </Button>
+                              ) : (
+                                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <Lock className="h-4 w-4 text-gray-400" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {lessonIndex + 1}. {lesson.title}
+                                </p>
+                                {lesson.description && <p className="text-sm text-gray-600">{lesson.description}</p>}
+                                <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {lesson.video_duration || "5 min"}
+                                  </span>
+                                  <span className="capitalize">{lesson.content_type || "video"}</span>
+                                </div>
+                              </div>
+                            </div>
+                            {lesson.is_free && <Badge className="bg-green-100 text-green-800">FREE</Badge>}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
 
               <TabsContent value="overview" className="space-y-6">
                 <Card>
@@ -346,7 +287,7 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-3">
-                      {course.whatYouLearn.map((item, index) => (
+                      {course.what_you_learn?.map((item: string, index: number) => (
                         <div key={index} className="flex items-start gap-2">
                           <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
                           <span className="text-gray-700">{item}</span>
@@ -362,7 +303,7 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      {course.requirements.map((req, index) => (
+                      {course.requirements?.map((req: string, index: number) => (
                         <li key={index} className="flex items-start gap-2">
                           <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
                           <span className="text-gray-700">{req}</span>
@@ -371,103 +312,40 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
                     </ul>
                   </CardContent>
                 </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Course Features</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-2 gap-3">
-                      {course.features.map((feature, index) => (
-                        <div key={index} className="flex items-start gap-2">
-                          <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="curriculum" className="space-y-6">
-                <div className="mb-4">
-                  <p className="text-gray-600">
-                    {totalLessons} lessons • {freeLessons} free preview lessons
-                  </p>
-                </div>
-
-                {course.curriculum.map((module, moduleIndex) => (
-                  <Card key={moduleIndex}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{module.module}</span>
-                        <Badge variant="outline">{module.duration}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {module.lessons.map((lesson, lessonIndex) => (
-                          <div key={lessonIndex} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              {lesson.free ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setPlayingVideo(lesson.videoId || null)}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Play className="h-4 w-4" />
-                                  Preview
-                                </Button>
-                              ) : (
-                                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                                  <Lock className="h-4 w-4 text-gray-400" />
-                                </div>
-                              )}
-                              <div>
-                                <p className="font-medium text-gray-900">{lesson.title}</p>
-                                <p className="text-sm text-gray-500">{lesson.duration}</p>
-                              </div>
-                            </div>
-                            {lesson.free && <Badge className="bg-green-100 text-green-800">Free</Badge>}
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
               </TabsContent>
 
               <TabsContent value="instructor" className="space-y-6">
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
-                      <img
-                        src={course.instructorAvatar || "/placeholder.svg"}
-                        alt={course.instructor}
-                        className="w-20 h-20 rounded-full"
-                      />
+                      <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-2xl font-bold">
+                          {course.instructor_name?.charAt(0) || "I"}
+                        </span>
+                      </div>
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{course.instructor}</h3>
-                        <p className="text-gray-600 mb-4">Senior Software Engineer & Tech Educator</p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{course.instructor_name}</h3>
+                        <p className="text-gray-600 mb-4">
+                          {course.instructor_title || "Senior Software Engineer & Tech Educator"}
+                        </p>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <p className="text-gray-500">Students</p>
-                            <p className="font-medium">{course.students.toLocaleString()}</p>
+                            <p className="font-medium">
+                              {course.instructor_total_students?.toLocaleString() || "1,000+"}
+                            </p>
                           </div>
                           <div>
                             <p className="text-gray-500">Rating</p>
-                            <p className="font-medium">{course.rating}/5</p>
+                            <p className="font-medium">{course.instructor_rating || "4.9"}/5</p>
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="mt-6">
                       <p className="text-gray-700">
-                        With over 8 years of industry experience and 5 years in tech education,
-                        {course.instructor} has helped thousands of students transition into successful tech careers.
-                        Known for breaking down complex concepts into digestible lessons and providing personalized
-                        mentorship to every student.
+                        {course.instructor_bio ||
+                          `With over 8 years of industry experience and 5 years in tech education, ${course.instructor_name} has helped thousands of students transition into successful tech careers. Known for breaking down complex concepts into digestible lessons and providing personalized mentorship to every student.`}
                       </p>
                     </div>
                   </CardContent>
@@ -475,65 +353,8 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
               </TabsContent>
 
               <TabsContent value="reviews" className="space-y-6">
-                <div className="grid gap-6">
-                  {[
-                    {
-                      name: "Adaora Okafor",
-                      avatar:
-                        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face",
-                      rating: 5,
-                      date: "2 weeks ago",
-                      review:
-                        "Excellent course! The instructor explains everything clearly and the projects are very practical. I landed my first tech job 3 months after completing this course.",
-                    },
-                    {
-                      name: "Emeka Nwankwo",
-                      avatar:
-                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face",
-                      rating: 5,
-                      date: "1 month ago",
-                      review:
-                        "Best investment I've made in my career. The curriculum is up-to-date and the mentorship is invaluable. Highly recommend!",
-                    },
-                    {
-                      name: "Funmi Adebayo",
-                      avatar:
-                        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face",
-                      rating: 4,
-                      date: "1 month ago",
-                      review:
-                        "Great course content and structure. The only improvement would be more live sessions, but overall very satisfied with my learning experience.",
-                    },
-                  ].map((review, index) => (
-                    <Card key={index}>
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <img
-                            src={review.avatar || "/placeholder.svg"}
-                            alt={review.name}
-                            className="w-12 h-12 rounded-full"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-gray-900">{review.name}</h4>
-                              <span className="text-sm text-gray-500">{review.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1 mb-3">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-4 w-4 ${
-                                    i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                            <p className="text-gray-700">{review.review}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Reviews will be loaded from the database</p>
                 </div>
               </TabsContent>
             </Tabs>
@@ -543,17 +364,17 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-6">
               {/* Video Player */}
-              {playingVideo && (
+              {selectedVideo && (
                 <Card>
                   <CardContent className="p-4">
                     <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center mb-4">
                       <div className="text-center text-white">
                         <Play className="h-12 w-12 mx-auto mb-2" />
-                        <p>YouTube Video: {playingVideo}</p>
+                        <p>{selectedVideo.title}</p>
                         <p className="text-sm opacity-75">Demo placeholder</p>
                       </div>
                     </div>
-                    <Button onClick={() => setPlayingVideo(null)} variant="outline" className="w-full">
+                    <Button onClick={() => setSelectedVideo(null)} variant="outline" className="w-full">
                       Close Preview
                     </Button>
                   </CardContent>
@@ -565,10 +386,19 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
                     <div className="flex items-center justify-center gap-2 mb-2">
-                      <span className="text-3xl font-bold text-gray-900">{course.price}</span>
-                      <span className="text-lg text-gray-500 line-through">{course.originalPrice}</span>
+                      <span className="text-3xl font-bold text-gray-900">{formatNaira(course.price)}</span>
+                      {course.original_price && course.original_price > course.price && (
+                        <span className="text-lg text-gray-500 line-through">{formatNaira(course.original_price)}</span>
+                      )}
                     </div>
-                    <Badge className="bg-red-100 text-red-800">Limited Time Offer</Badge>
+                    <p className="text-sm text-gray-600">
+                      or {formatNaira(Math.ceil(course.price / 6))}/month for 6 months
+                    </p>
+                    {course.original_price && course.original_price > course.price && (
+                      <Badge className="bg-red-100 text-red-800 mt-2">
+                        Save {Math.round(((course.original_price - course.price) / course.original_price) * 100)}%
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="space-y-4 mb-6">
@@ -578,19 +408,51 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">{course.duration} duration</span>
+                      <span className="text-sm text-gray-600">{course.duration_hours} hours content</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">{course.level}</span>
+                      <span className="text-sm text-gray-600">{course.level} level</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Award className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">Certificate included</span>
                     </div>
                   </div>
 
-                  <Button onClick={onEnroll} className="w-full mb-4">
-                    Enroll Now
+                  <Button
+                    onClick={handleEnroll}
+                    disabled={enrolling}
+                    className="w-full mb-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    {enrolling ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Processing...
+                      </div>
+                    ) : (
+                      "Enroll Now"
+                    )}
                   </Button>
 
-                  <p className="text-xs text-gray-500 text-center">30-day money-back guarantee</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                      <Download className="h-4 w-4" />
+                      Resources
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => onAuthRequest("student")}
+                      className="flex items-center gap-2"
+                    >
+                      <Users className="h-4 w-4" />
+                      Login
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 text-center mt-4">
+                    30-day money-back guarantee • Lifetime access
+                  </p>
                 </CardContent>
               </Card>
 
@@ -604,16 +466,16 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
                     Watch {freeLessons} free lessons to get a taste of this course
                   </p>
                   <div className="space-y-2">
-                    {course.curriculum[0].lessons
-                      .filter((lesson) => lesson.free)
-                      .slice(0, 3)
-                      .map((lesson, index) => (
+                    {course.modules?.[0]?.lessons
+                      ?.filter((lesson: any) => lesson.is_free)
+                      ?.slice(0, 3)
+                      ?.map((lesson: any, index: number) => (
                         <Button
                           key={index}
                           variant="outline"
                           size="sm"
                           className="w-full justify-start bg-transparent"
-                          onClick={() => setPlayingVideo(lesson.videoId || null)}
+                          onClick={() => handleVideoPlay(lesson)}
                         >
                           <Play className="h-3 w-3 mr-2" />
                           {lesson.title}
@@ -626,6 +488,32 @@ export function CoursePreview({ courseId, onBack, onEnroll }: CoursePreviewProps
           </div>
         </div>
       </div>
+
+      {/* Video Modal */}
+      <Dialog open={showVideoModal} onOpenChange={setShowVideoModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>{selectedVideo?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="p-6">
+            {selectedVideo && (
+              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center text-gray-500">
+                  <Play className="h-16 w-16 mx-auto mb-4" />
+                  <p className="text-lg font-medium">{selectedVideo.title}</p>
+                  <p className="text-sm">Video player would be integrated here</p>
+                </div>
+              </div>
+            )}
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Enjoying the preview?</strong> Enroll now to access all {course.modules?.length || 0} modules
+                and get personalized mentorship!
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -29,115 +29,6 @@ export interface PaystackResponse {
   redirecturl: string
 }
 
-export interface Course {
-  id: string
-  title: string
-  price: number
-  duration: string
-  description: string
-  features: string[]
-  category: string
-}
-
-export interface PaymentPlan {
-  id: string
-  name: string
-  totalAmount: number
-  installments: number
-  monthlyAmount: number
-  description: string
-}
-
-export const courses: Course[] = [
-  {
-    id: "web-dev",
-    title: "Full-Stack Web Development Bootcamp",
-    price: 180000,
-    duration: "6 months",
-    description: "Learn HTML, CSS, JavaScript, React, Node.js, and MongoDB",
-    features: [
-      "Build 5 portfolio projects",
-      "Personal mentor assigned",
-      "Job placement support",
-      "Lifetime access",
-      "Certificate of completion",
-    ],
-    category: "Web Development",
-  },
-  {
-    id: "ui-ux",
-    title: "Digital Product Design Mastery",
-    price: 150000,
-    duration: "4 months",
-    description: "Master Figma, User Research, Prototyping, and Design Systems",
-    features: [
-      "Design 3 mobile apps",
-      "Build professional portfolio",
-      "1-on-1 design reviews",
-      "Industry mentor guidance",
-      "Job placement guarantee",
-    ],
-    category: "UI/UX Design",
-  },
-  {
-    id: "data-science",
-    title: "Data Science for Business",
-    price: 200000,
-    duration: "5 months",
-    description: "Learn Python, SQL, Machine Learning, and Data Visualization",
-    features: [
-      "Analyze real business data",
-      "Create AI models",
-      "Portfolio of 4 projects",
-      "Industry certification",
-      "Remote job placement",
-    ],
-    category: "Data Science",
-  },
-  {
-    id: "digital-marketing",
-    title: "Social Media Marketing Pro",
-    price: 100000,
-    duration: "3 months",
-    description: "Master Facebook Ads, Instagram Marketing, and Content Strategy",
-    features: [
-      "Manage 5 real client campaigns",
-      "Build marketing portfolio",
-      "Agency setup guidance",
-      "Client acquisition strategies",
-      "Ongoing support community",
-    ],
-    category: "Digital Marketing",
-  },
-]
-
-export const paymentPlans: PaymentPlan[] = [
-  {
-    id: "starter",
-    name: "Starter Plan",
-    totalAmount: 50000,
-    installments: 1,
-    monthlyAmount: 50000,
-    description: "Perfect for testing the waters",
-  },
-  {
-    id: "professional",
-    name: "Professional Plan",
-    totalAmount: 180000,
-    installments: 6,
-    monthlyAmount: 30000,
-    description: "Most popular - Complete transformation",
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise Plan",
-    totalAmount: 300000,
-    installments: 6,
-    monthlyAmount: 50000,
-    description: "Best value - Full career transformation",
-  },
-]
-
 // Generate unique payment reference
 export const generatePaymentRef = () => {
   return `spacehub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -166,4 +57,64 @@ export const loadPaystackScript = (): Promise<boolean> => {
     script.onerror = () => resolve(false)
     document.head.appendChild(script)
   })
+}
+
+// Initialize Paystack payment
+export async function initializePayment(config: Omit<PaystackConfig, "key">) {
+  try {
+    const scriptLoaded = await loadPaystackScript()
+    if (!scriptLoaded) {
+      throw new Error("Failed to load Paystack")
+    }
+
+    const paymentConfig: PaystackConfig = {
+      key: PAYSTACK_PUBLIC_KEY,
+      ...config,
+    }
+
+    const popup = (window as any).PaystackPop.setup(paymentConfig)
+    popup.openIframe()
+
+    return { success: true }
+  } catch (error) {
+    console.error("Payment initialization error:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Payment hook for React components
+export function usePaystack() {
+  const makePayment = async (
+    amount: number,
+    email: string,
+    metadata: any = {},
+    onSuccess?: (response: PaystackResponse) => void,
+    onClose?: () => void,
+  ) => {
+    const reference = generatePaymentRef()
+
+    return await initializePayment({
+      email,
+      amount: amount * 100, // Convert to kobo
+      currency: "NGN",
+      ref: reference,
+      callback: (response) => {
+        console.log("Payment successful:", response)
+        onSuccess?.(response)
+      },
+      onClose: () => {
+        console.log("Payment cancelled")
+        onClose?.()
+      },
+      metadata: {
+        custom_fields: Object.entries(metadata).map(([key, value]) => ({
+          display_name: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          variable_name: key,
+          value: String(value),
+        })),
+      },
+    })
+  }
+
+  return { makePayment, formatNaira, generatePaymentRef }
 }

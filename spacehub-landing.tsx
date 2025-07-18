@@ -2,298 +2,344 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { HeroSection } from "./components/hero-section"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+
+// Import all components
+import { AnimatedHeroSection } from "./components/animated-hero-section"
 import { ProblemSection } from "./components/problem-section"
-import { SolutionSection } from "./components/solution-section"
-import { SuccessStories } from "./components/success-stories"
+import { AnimatedSolutionSection } from "./components/animated-solution-section"
+import { AnimatedSuccessStories } from "./components/animated-success-stories"
 import { PricingSection } from "./components/pricing-section"
 import { FinalCTA } from "./components/final-cta"
+import { LeadCaptureModal } from "./components/lead-capture-modal"
+import { InlineLeadForm } from "./components/inline-lead-form"
+import { ExitIntentPopup } from "./components/exit-intent-popup"
+import { FloatingCTA } from "./components/floating-cta"
+
+// Dashboard and other components
 import { CourseCatalog } from "./components/course-catalog"
 import { CoursePreview } from "./components/course-preview"
-import { AboutPage } from "./components/about-page"
-import { ContactPage } from "./components/contact-page"
+import { CourseCheckout } from "./components/course-checkout"
+import { PaymentSuccess } from "./components/payment-success"
 import { StudentDashboard } from "./components/student-dashboard"
 import { StaffDashboard } from "./components/staff-dashboard"
+import { AboutPage } from "./components/about-page"
+import { ContactPage } from "./components/contact-page"
 import { AuthModal } from "./components/auth-modal"
-import { Menu, X, User, GraduationCap } from "lucide-react"
+
+// Hooks and data
+import { useAuth, useApi } from "./lib/api"
+import { sampleCourses, type Course } from "./lib/courses-data"
 
 export default function SpaceHubLanding() {
-  const [currentView, setCurrentView] = useState<
-    "home" | "courses" | "course-preview" | "about" | "contact" | "student-dashboard" | "staff-dashboard"
-  >("home")
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("")
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userType, setUserType] = useState<"student" | "staff" | null>(null)
+  const [currentPage, setCurrentPage] = useState("home")
+  const [showLeadModal, setShowLeadModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "register">("login")
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+  const [showCoursePreview, setShowCoursePreview] = useState(false)
+  const [showCheckout, setShowCheckout] = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState<{
+    reference: string
+    course: Course
+    amount: string
+  } | null>(null)
 
+  const { user, loading, logout } = useAuth()
+  const api = useApi()
+
+  // Handle navigation
+  const handleNavigate = (page: string) => {
+    setCurrentPage(page)
+    // Close any open modals
+    setShowLeadModal(false)
+    setShowAuthModal(false)
+    setShowCoursePreview(false)
+    setShowCheckout(false)
+    setPaymentSuccess(null)
+  }
+
+  // Handle course selection
+  const handleCourseSelect = (courseId: string) => {
+    const course = sampleCourses.find((c) => c.id === courseId)
+    if (course) {
+      setSelectedCourse(course)
+      setShowCoursePreview(true)
+    }
+  }
+
+  // Handle course preview
   const handleCoursePreview = (courseId: string) => {
-    setSelectedCourseId(courseId)
-    setCurrentView("course-preview")
+    handleCourseSelect(courseId)
   }
 
-  const handleCourseEnroll = (courseId: string) => {
-    if (!isLoggedIn) {
-      setIsAuthModalOpen(true)
-    } else {
-      // Handle enrollment logic
-      alert(`Enrolling in course: ${courseId}`)
+  // Handle course enrollment
+  const handleEnrollCourse = (courseId: string) => {
+    if (!user) {
+      setAuthMode("register")
+      setShowAuthModal(true)
+      return
+    }
+
+    const course = sampleCourses.find((c) => c.id === courseId)
+    if (course) {
+      setSelectedCourse(course)
+      setShowCheckout(true)
     }
   }
 
-  const handleStudentLogin = (credentials: { email: string; password: string }) => {
-    // In a real app, this would validate credentials
-    setIsLoggedIn(true)
-    setUserType("student")
-    setCurrentView("student-dashboard")
+  // Handle payment success
+  const handlePaymentSuccess = (reference: string) => {
+    if (selectedCourse) {
+      setPaymentSuccess({
+        reference,
+        course: selectedCourse,
+        amount: `₦${(selectedCourse.price * 0.9).toLocaleString()}`, // Assuming full payment with discount
+      })
+      setShowCheckout(false)
+    }
   }
 
-  const handleStaffLogin = (credentials: { email: string; password: string }) => {
-    // In a real app, this would validate credentials
-    setIsLoggedIn(true)
-    setUserType("staff")
-    setCurrentView("staff-dashboard")
+  // Handle authentication success
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false)
+    // If user was trying to enroll, redirect to checkout
+    if (selectedCourse) {
+      setShowCheckout(true)
+    }
   }
 
-  const handleSignup = (data: { name: string; email: string; password: string }) => {
-    // In a real app, this would create a new account
-    setIsLoggedIn(true)
-    setUserType("student")
-    setCurrentView("student-dashboard")
-  }
-
+  // Handle logout
   const handleLogout = () => {
-    setIsLoggedIn(false)
-    setUserType(null)
-    setCurrentView("home")
+    logout()
+    setCurrentPage("home")
   }
 
-  const handleDashboardAccess = () => {
-    if (isLoggedIn) {
-      if (userType === "student") {
-        setCurrentView("student-dashboard")
-      } else if (userType === "staff") {
-        setCurrentView("staff-dashboard")
-      }
-    } else {
-      setIsAuthModalOpen(true)
-    }
-  }
-
-  const renderNavigation = () => (
-    <nav className="bg-white shadow-sm sticky top-0 z-50">
-      <div className="container max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView("home")}>
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">SpaceHub</span>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            <Button variant="ghost" onClick={() => setCurrentView("home")}>
-              Home
-            </Button>
-            <Button variant="ghost" onClick={() => setCurrentView("courses")}>
-              Courses
-            </Button>
-            <Button variant="ghost" onClick={() => setCurrentView("about")}>
-              About
-            </Button>
-            <Button variant="ghost" onClick={() => setCurrentView("contact")}>
-              Contact
-            </Button>
-
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={handleDashboardAccess}>
-                  {userType === "student" ? (
-                    <>
-                      <GraduationCap className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </>
-                  ) : (
-                    <>
-                      <User className="h-4 w-4 mr-2" />
-                      Staff Portal
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={() => setIsAuthModalOpen(true)}>Login / Sign Up</Button>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading SpaceHub...</p>
         </div>
-
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t bg-white py-4">
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => {
-                  setCurrentView("home")
-                  setIsMobileMenuOpen(false)
-                }}
-              >
-                Home
-              </Button>
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => {
-                  setCurrentView("courses")
-                  setIsMobileMenuOpen(false)
-                }}
-              >
-                Courses
-              </Button>
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => {
-                  setCurrentView("about")
-                  setIsMobileMenuOpen(false)
-                }}
-              >
-                About
-              </Button>
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => {
-                  setCurrentView("contact")
-                  setIsMobileMenuOpen(false)
-                }}
-              >
-                Contact
-              </Button>
-
-              {isLoggedIn ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {
-                      handleDashboardAccess()
-                      setIsMobileMenuOpen(false)
-                    }}
-                  >
-                    {userType === "student" ? (
-                      <>
-                        <GraduationCap className="h-4 w-4 mr-2" />
-                        Dashboard
-                      </>
-                    ) : (
-                      <>
-                        <User className="h-4 w-4 mr-2" />
-                        Staff Portal
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="justify-start bg-transparent"
-                    onClick={() => {
-                      handleLogout()
-                      setIsMobileMenuOpen(false)
-                    }}
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  className="justify-start"
-                  onClick={() => {
-                    setIsAuthModalOpen(true)
-                    setIsMobileMenuOpen(false)
-                  }}
-                >
-                  Login / Sign Up
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
-    </nav>
-  )
+    )
+  }
 
-  const renderContent = () => {
-    switch (currentView) {
+  // Render different pages based on current page
+  const renderPage = () => {
+    switch (currentPage) {
       case "courses":
         return (
-          <div className="container max-w-7xl mx-auto px-4 py-8">
-            <CourseCatalog onPreviewCourse={handleCoursePreview} onEnrollCourse={handleCourseEnroll} />
-          </div>
-        )
-
-      case "course-preview":
-        return (
-          <CoursePreview
-            courseId={selectedCourseId}
-            onBack={() => setCurrentView("courses")}
-            onEnroll={() => handleCourseEnroll(selectedCourseId)}
+          <CourseCatalog
+            onCourseSelect={handleCourseSelect}
+            onCoursePreview={handleCoursePreview}
+            onEnrollCourse={handleEnrollCourse}
           />
         )
 
       case "about":
-        return <AboutPage onBack={() => setCurrentView("home")} />
+        return <AboutPage onNavigate={handleNavigate} />
 
       case "contact":
-        return <ContactPage onBack={() => setCurrentView("home")} />
+        return <ContactPage onNavigate={handleNavigate} />
 
       case "student-dashboard":
-        return <StudentDashboard onBack={handleLogout} />
+        return <StudentDashboard onNavigate={handleNavigate} />
 
       case "staff-dashboard":
-        return <StaffDashboard onBack={handleLogout} />
+        return <StaffDashboard onNavigate={handleNavigate} />
 
       default:
         return (
-          <div className="space-y-0">
-            <HeroSection onGetStarted={() => setCurrentView("courses")} />
+          <>
+            <AnimatedHeroSection onGetStarted={() => setShowLeadModal(true)} onNavigate={handleNavigate} />
             <ProblemSection />
-            <SolutionSection />
-            <SuccessStories />
-            <PricingSection onEnroll={handleCourseEnroll} />
-            <FinalCTA onGetStarted={() => setCurrentView("courses")} />
-          </div>
+            <AnimatedSolutionSection />
+            <AnimatedSuccessStories />
+            <PricingSection onEnrollClick={handleEnrollCourse} />
+            <InlineLeadForm />
+            <FinalCTA onGetStarted={() => setShowLeadModal(true)} />
+            <FloatingCTA onGetStarted={() => setShowLeadModal(true)} />
+            <ExitIntentPopup />
+          </>
         )
     }
   }
 
   return (
     <div className="min-h-screen bg-white">
-      {renderNavigation()}
-      {renderContent()}
+      {/* Navigation Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+        <div className="container max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavigate("home")}>
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">S</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">SpaceHub</span>
+            </div>
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onStudentLogin={handleStudentLogin}
-        onStaffLogin={handleStaffLogin}
-        onSignup={handleSignup}
-      />
+            {/* Navigation Links */}
+            <nav className="hidden md:flex items-center gap-8">
+              <button
+                onClick={() => handleNavigate("home")}
+                className={`text-sm font-medium transition-colors ${
+                  currentPage === "home" ? "text-blue-600" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Home
+              </button>
+              <button
+                onClick={() => handleNavigate("courses")}
+                className={`text-sm font-medium transition-colors ${
+                  currentPage === "courses" ? "text-blue-600" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Courses
+              </button>
+              <button
+                onClick={() => handleNavigate("about")}
+                className={`text-sm font-medium transition-colors ${
+                  currentPage === "about" ? "text-blue-600" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                About
+              </button>
+              <button
+                onClick={() => handleNavigate("contact")}
+                className={`text-sm font-medium transition-colors ${
+                  currentPage === "contact" ? "text-blue-600" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Contact
+              </button>
+            </nav>
+
+            {/* Auth/User Section */}
+            <div className="flex items-center gap-4">
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleNavigate(user.role === "instructor" ? "staff-dashboard" : "student-dashboard")}
+                    className="text-sm"
+                  >
+                    Dashboard
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={user.avatar_url || "/placeholder.svg?height=32&width=32"}
+                      alt={`${user.first_name} ${user.last_name}`}
+                      className="w-8 h-8 rounded-full"
+                    />
+                    <span className="text-sm font-medium text-gray-900">
+                      {user.first_name} {user.last_name}
+                    </span>
+                  </div>
+                  <Button variant="outline" onClick={handleLogout} className="text-sm bg-transparent">
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setAuthMode("login")
+                      setShowAuthModal(true)
+                    }}
+                    className="text-sm"
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setAuthMode("register")
+                      setShowAuthModal(true)
+                    }}
+                    className="text-sm bg-blue-600 hover:bg-blue-700"
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="pt-20">{renderPage()}</main>
+
+      {/* Modals */}
+      {/* Lead Capture Modal */}
+      <Dialog open={showLeadModal} onOpenChange={setShowLeadModal}>
+        <DialogContent className="max-w-2xl">
+          <LeadCaptureModal onClose={() => setShowLeadModal(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Auth Modal */}
+      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+        <DialogContent className="max-w-md">
+          <AuthModal
+            mode={authMode}
+            onSuccess={handleAuthSuccess}
+            onClose={() => setShowAuthModal(false)}
+            onSwitchMode={(mode) => setAuthMode(mode)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Course Preview Modal */}
+      <Dialog open={showCoursePreview} onOpenChange={setShowCoursePreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedCourse && (
+            <CoursePreview
+              course={selectedCourse}
+              onEnroll={() => {
+                setShowCoursePreview(false)
+                handleEnrollCourse(selectedCourse.id)
+              }}
+              onClose={() => setShowCoursePreview(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout Modal */}
+      <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+          {selectedCourse && (
+            <CourseCheckout
+              course={selectedCourse}
+              onSuccess={handlePaymentSuccess}
+              onClose={() => setShowCheckout(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Success Modal */}
+      <Dialog open={!!paymentSuccess} onOpenChange={() => setPaymentSuccess(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          {paymentSuccess && (
+            <PaymentSuccess
+              reference={paymentSuccess.reference}
+              courseName={paymentSuccess.course.title}
+              customerEmail={user?.email || ""}
+              amount={paymentSuccess.amount}
+              onContinue={() => {
+                setPaymentSuccess(null)
+                handleNavigate(user?.role === "instructor" ? "staff-dashboard" : "student-dashboard")
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

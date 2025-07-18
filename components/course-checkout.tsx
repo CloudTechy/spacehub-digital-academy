@@ -8,15 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { CheckCircle, CreditCard, Shield, Clock, Users } from "lucide-react"
-import {
-  type Course,
-  formatNaira,
-  generatePaymentRef,
-  loadPaystackScript,
-  PAYSTACK_PUBLIC_KEY,
-  type PaystackConfig,
-  type PaystackResponse,
-} from "../lib/paystack"
+import { usePaystack, formatNaira } from "../lib/paystack"
+import { useApi } from "../lib/api"
+import type { Course } from "../lib/courses-data"
 
 interface CourseCheckoutProps {
   course: Course
@@ -34,6 +28,9 @@ export function CourseCheckout({ course, onSuccess, onClose }: CourseCheckoutPro
   const [paymentPlan, setPaymentPlan] = useState<"full" | "installment">("full")
   const [isProcessing, setIsProcessing] = useState(false)
 
+  const { makePayment } = usePaystack()
+  const api = useApi()
+
   const installmentAmount = Math.ceil(course.price / 6) // 6 months installment
   const fullPaymentDiscount = course.price * 0.1 // 10% discount for full payment
   const discountedPrice = course.price - fullPaymentDiscount
@@ -47,57 +44,47 @@ export function CourseCheckout({ course, onSuccess, onClose }: CourseCheckoutPro
     setIsProcessing(true)
 
     try {
-      const scriptLoaded = await loadPaystackScript()
-      if (!scriptLoaded) {
-        throw new Error("Failed to load Paystack")
-      }
-
       const amount = paymentPlan === "full" ? discountedPrice : installmentAmount
-      const reference = generatePaymentRef()
 
-      const config: PaystackConfig = {
-        key: PAYSTACK_PUBLIC_KEY,
-        email: customerInfo.email,
-        amount: amount * 100, // Convert to kobo
-        currency: "NGN",
-        ref: reference,
-        callback: (response: PaystackResponse) => {
-          console.log("Payment successful:", response)
+      const result = await makePayment(
+        amount,
+        customerInfo.email,
+        {
+          course_id: course.id,
+          course_title: course.title,
+          payment_plan: paymentPlan,
+          full_name: `${customerInfo.firstName} ${customerInfo.lastName}`,
+          phone: customerInfo.phone,
+        },
+        async (response) => {
+          // Verify payment and create enrollment
+          try {
+            const verifyResult = await api.verifyPayment(response.reference)
+            if (verifyResult.success) {
+              // Create enrollment
+              const enrollResult = await api.enrollInCourse(course.id, response.reference)
+              if (enrollResult.success) {
+                onSuccess?.(response.reference)
+              } else {
+                alert("Payment successful but enrollment failed. Please contact support.")
+              }
+            } else {
+              alert("Payment verification failed. Please contact support.")
+            }
+          } catch (error) {
+            console.error("Post-payment processing error:", error)
+            alert("Payment successful but there was an issue with enrollment. Please contact support.")
+          }
           setIsProcessing(false)
-          onSuccess?.(response.reference)
         },
-        onClose: () => {
+        () => {
           setIsProcessing(false)
-          console.log("Payment cancelled")
         },
-        metadata: {
-          custom_fields: [
-            {
-              display_name: "Course",
-              variable_name: "course_id",
-              value: course.id,
-            },
-            {
-              display_name: "Payment Plan",
-              variable_name: "payment_plan",
-              value: paymentPlan,
-            },
-            {
-              display_name: "Full Name",
-              variable_name: "full_name",
-              value: `${customerInfo.firstName} ${customerInfo.lastName}`,
-            },
-            {
-              display_name: "Phone",
-              variable_name: "phone",
-              value: customerInfo.phone,
-            },
-          ],
-        },
+      )
+
+      if (!result.success) {
+        throw new Error(result.error || "Payment initialization failed")
       }
-
-      const popup = (window as any).PaystackPop.setup(config)
-      popup.openIframe()
     } catch (error) {
       console.error("Payment error:", error)
       setIsProcessing(false)
@@ -124,13 +111,24 @@ export function CourseCheckout({ course, onSuccess, onClose }: CourseCheckoutPro
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {course.duration}
+                {course.duration_hours} hours
               </span>
-              <Badge variant="secondary">{course.category}</Badge>
+              <Badge variant="secondary">{course.category_name}</Badge>
+              <Badge variant="outline">{course.level}</Badge>
+            </div>
+
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <span className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                {course.enrollment_count} students
+              </span>
+              <span>
+                ⭐ {course.rating} ({course.total_reviews} reviews)
+              </span>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2">What You'll Get:</h4>
+              <h4 className="font-semibold mb-2">What You'll Learn:</h4>
               <ul className="space-y-2">
                 {course.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2 text-sm">

@@ -1,133 +1,146 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { query } from "@/lib/database"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get("category")
+    const level = searchParams.get("level")
+    const instructor = searchParams.get("instructor")
     const featured = searchParams.get("featured")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const limit = Number.parseInt(searchParams.get("limit") || "20")
     const offset = Number.parseInt(searchParams.get("offset") || "0")
 
-    let queryText = `
+    let query = `
       SELECT 
-        c.id, c.title, c.slug, c.description, c.short_description,
-        c.thumbnail_url, c.price, c.original_price, c.currency,
-        c.duration_hours, c.level, c.enrollment_count, c.rating,
-        c.total_reviews, c.is_featured, c.created_at,
-        cat.name as category_name, cat.slug as category_slug,
+        c.id,
+        c.title,
+        c.slug,
+        c.description,
+        c.short_description,
+        c.thumbnail_url,
+        c.price,
+        c.original_price,
+        c.currency,
+        c.duration_hours,
+        c.level,
+        c.is_featured,
+        c.is_published,
+        c.created_at,
+        c.updated_at,
+        cat.name as category_name,
         u.first_name || ' ' || u.last_name as instructor_name,
-        i.title as instructor_title, i.rating as instructor_rating
+        u.id as instructor_id,
+        COALESCE(AVG(r.rating), 0) as rating,
+        COUNT(DISTINCT r.id) as total_reviews,
+        COUNT(DISTINCT e.id) as enrollment_count,
+        COALESCE(AVG(ur.rating), 0) as instructor_rating
       FROM courses c
-      JOIN categories cat ON c.category_id = cat.id
-      JOIN instructors i ON c.instructor_id = i.id
-      JOIN users u ON i.user_id = u.id
+      LEFT JOIN categories cat ON c.category_id = cat.id
+      LEFT JOIN users u ON c.instructor_id = u.id
+      LEFT JOIN reviews r ON c.id = r.course_id
+      LEFT JOIN enrollments e ON c.id = e.course_id
+      LEFT JOIN reviews ur ON u.id = ur.instructor_id
       WHERE c.is_published = true
     `
 
     const params: any[] = []
     let paramIndex = 1
 
-    if (category) {
-      queryText += ` AND cat.slug = $${paramIndex}`
+    if (category && category !== "all") {
+      query += ` AND cat.slug = $${paramIndex}`
       params.push(category)
       paramIndex++
     }
 
-    if (featured === "true") {
-      queryText += ` AND c.is_featured = true`
+    if (level && level !== "all") {
+      query += ` AND c.level = $${paramIndex}`
+      params.push(level)
+      paramIndex++
     }
 
-    queryText += ` ORDER BY c.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`
+    if (featured === "true") {
+      query += ` AND c.is_featured = true`
+    }
+
+    if (instructor === "true") {
+      // This would require authentication to get instructor's courses
+      // For now, we'll skip this filter
+    }
+
+    query += `
+      GROUP BY c.id, cat.name, u.first_name, u.last_name, u.id
+      ORDER BY c.is_featured DESC, c.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `
+
     params.push(limit, offset)
 
-    const result = await query(queryText, params)
+    const courses = await sql(query, params)
+
+    // Get total count for pagination
+    let countQuery = `
+      SELECT COUNT(DISTINCT c.id) as total
+      FROM courses c
+      LEFT JOIN categories cat ON c.category_id = cat.id
+      WHERE c.is_published = true
+    `
+
+    const countParams: any[] = []
+    let countParamIndex = 1
+
+    if (category && category !== "all") {
+      countQuery += ` AND cat.slug = $${countParamIndex}`
+      countParams.push(category)
+      countParamIndex++
+    }
+
+    if (level && level !== "all") {
+      countQuery += ` AND c.level = $${countParamIndex}`
+      countParams.push(level)
+      countParamIndex++
+    }
+
+    if (featured === "true") {
+      countQuery += ` AND c.is_featured = true`
+    }
+
+    const totalResult = await sql(countQuery, countParams)
+    const total = Number.parseInt(totalResult[0]?.total || "0")
 
     return NextResponse.json({
       success: true,
-      courses: result.rows,
-      pagination: {
-        limit,
-        offset,
-        total: result.rows.length,
-      },
+      courses: courses.map((course) => ({
+        ...course,
+        rating: Number.parseFloat(course.rating) || 0,
+        total_reviews: Number.parseInt(course.total_reviews) || 0,
+        enrollment_count: Number.parseInt(course.enrollment_count) || 0,
+        instructor_rating: Number.parseFloat(course.instructor_rating) || 0,
+      })),
+      total,
+      limit,
+      offset,
     })
   } catch (error) {
-    console.error("Courses fetch error:", error)
-    return NextResponse.json({ error: "Failed to fetch courses" }, { status: 500 })
+    console.error("Get courses error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get("x-user-id")
-    const userRole = request.headers.get("x-user-role")
-
-    if (userRole !== "instructor" && userRole !== "admin") {
-      return NextResponse.json({ error: "Only instructors can create courses" }, { status: 403 })
+    // This would require authentication
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
-    const {
-      title,
-      description,
-      short_description,
-      category_id,
-      price,
-      original_price,
-      level,
-      requirements,
-      what_you_learn,
-    } = await request.json()
-
-    if (!title || !description || !category_id) {
-      return NextResponse.json({ error: "Title, description, and category are required" }, { status: 400 })
-    }
-
-    // Get instructor ID
-    const instructorResult = await query("SELECT id FROM instructors WHERE user_id = $1", [userId])
-
-    if (instructorResult.rows.length === 0) {
-      return NextResponse.json({ error: "Instructor profile not found" }, { status: 404 })
-    }
-
-    const instructorId = instructorResult.rows[0].id
-
-    // Create slug from title
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "")
-
-    const result = await query(
-      `INSERT INTO courses (
-        title, slug, description, short_description, instructor_id, 
-        category_id, price, original_price, level, requirements, what_you_learn
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
-      RETURNING *`,
-      [
-        title,
-        slug,
-        description,
-        short_description,
-        instructorId,
-        category_id,
-        price || 0,
-        original_price,
-        level || "beginner",
-        requirements || [],
-        what_you_learn || [],
-      ],
-    )
-
-    return NextResponse.json(
-      {
-        success: true,
-        course: result.rows[0],
-      },
-      { status: 201 },
-    )
+    // For now, return a placeholder response
+    return NextResponse.json({ error: "Course creation not implemented yet" }, { status: 501 })
   } catch (error) {
-    console.error("Course creation error:", error)
-    return NextResponse.json({ error: "Failed to create course" }, { status: 500 })
+    console.error("Create course error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

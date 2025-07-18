@@ -66,6 +66,32 @@ export interface DetailedCourse {
   }
 }
 
+export interface Course {
+  id: string
+  title: string
+  slug: string
+  description: string
+  short_description: string
+  thumbnail_url: string
+  price: number
+  original_price?: number
+  currency: string
+  duration_hours: number
+  level: "beginner" | "intermediate" | "advanced"
+  enrollment_count: number
+  rating: number
+  total_reviews: number
+  is_featured: boolean
+  is_published: boolean
+  category_name: string
+  instructor_name: string
+  instructor_id: string
+  instructor_rating: number
+  created_at: string
+  updated_at: string
+  features: string[]
+}
+
 export const instructors: Instructor[] = [
   {
     id: "sarah-adebayo",
@@ -106,6 +132,36 @@ export const instructors: Instructor[] = [
     bio: "Kemi has grown digital audiences from 0 to millions across multiple industries. She's an expert in social media marketing and paid advertising.",
     experience: "6+ years",
     linkedin: "https://linkedin.com/in/kemi-johnson",
+  },
+  {
+    id: "instructor-1",
+    name: "John Doe",
+    title: "Full Stack Developer",
+    company: "Tech Innovators",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+    bio: "John is a seasoned full-stack developer with expertise in React, Node.js, and MongoDB.",
+    experience: "12+ years",
+    linkedin: "https://linkedin.com/in/john-doe",
+  },
+  {
+    id: "instructor-2",
+    name: "Jane Smith",
+    title: "Data Scientist",
+    company: "Data Analytics Inc.",
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
+    bio: "Jane is a data scientist with a strong background in Python and machine learning.",
+    experience: "10+ years",
+    linkedin: "https://linkedin.com/in/jane-smith",
+  },
+  {
+    id: "instructor-3",
+    name: "Mike Johnson",
+    title: "Mobile Developer",
+    company: "AppWorks",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+    bio: "Mike specializes in mobile app development using React Native and Expo.",
+    experience: "8+ years",
+    linkedin: "https://linkedin.com/in/mike-johnson",
   },
 ]
 
@@ -541,12 +597,144 @@ export const detailedCourses: DetailedCourse[] = [
   },
 ]
 
+export const sampleCourses: Course[] = [
+  {
+    id: "1",
+    title: "Full Stack Web Development with React & Node.js",
+    slug: "full-stack-web-development",
+    description:
+      "Master modern web development with React, Node.js, and MongoDB. Build real-world applications from scratch.",
+    short_description: "Learn full-stack development with React, Node.js, and MongoDB",
+    thumbnail_url: "/placeholder.svg?height=200&width=300",
+    price: 150000,
+    original_price: 200000,
+    currency: "NGN",
+    duration_hours: 40,
+    level: "intermediate",
+    enrollment_count: 1250,
+    rating: 4.8,
+    total_reviews: 324,
+    is_featured: true,
+    is_published: true,
+    category_name: "Web Development",
+    instructor_name: "John Doe",
+    instructor_id: "instructor-1",
+    instructor_rating: 4.9,
+    created_at: "2024-01-15T00:00:00Z",
+    updated_at: "2024-01-15T00:00:00Z",
+    features: [
+      "Build 5 real-world projects",
+      "Master React hooks and context",
+      "Learn Node.js and Express",
+      "Database design with MongoDB",
+      "Authentication and authorization",
+      "Deploy to production",
+    ],
+  },
+  {
+    id: "2",
+    title: "Data Science with Python",
+    slug: "data-science-python",
+    description: "Learn data analysis, machine learning, and visualization with Python, pandas, and scikit-learn.",
+    short_description: "Master data science and machine learning with Python",
+    thumbnail_url: "/placeholder.svg?height=200&width=300",
+    price: 120000,
+    original_price: 160000,
+    currency: "NGN",
+    duration_hours: 35,
+    level: "beginner",
+    enrollment_count: 890,
+    rating: 4.7,
+    total_reviews: 256,
+    is_featured: true,
+    is_published: true,
+    category_name: "Data Science",
+    instructor_name: "Jane Smith",
+    instructor_id: "instructor-2",
+    instructor_rating: 4.8,
+    created_at: "2024-01-10T00:00:00Z",
+    updated_at: "2024-01-10T00:00:00Z",
+    features: [
+      "Python fundamentals",
+      "Data analysis with pandas",
+      "Machine learning algorithms",
+      "Data visualization",
+      "Real-world projects",
+      "Career guidance",
+    ],
+  },
+  {
+    id: "3",
+    title: "Mobile App Development with React Native",
+    slug: "react-native-mobile-development",
+    description: "Build cross-platform mobile apps for iOS and Android using React Native and Expo.",
+    short_description: "Create mobile apps with React Native",
+    thumbnail_url: "/placeholder.svg?height=200&width=300",
+    price: 130000,
+    original_price: 170000,
+    currency: "NGN",
+    duration_hours: 30,
+    level: "intermediate",
+    enrollment_count: 675,
+    rating: 4.6,
+    total_reviews: 189,
+    is_featured: false,
+    is_published: true,
+    category_name: "Mobile Development",
+    instructor_name: "Mike Johnson",
+    instructor_id: "instructor-3",
+    instructor_rating: 4.7,
+    created_at: "2024-01-05T00:00:00Z",
+    updated_at: "2024-01-05T00:00:00Z",
+    features: [
+      "React Native fundamentals",
+      "Navigation and routing",
+      "State management",
+      "Native device features",
+      "App store deployment",
+      "Performance optimization",
+    ],
+  },
+]
+
 export const categories = [
-  { id: "all", name: "All Courses", count: detailedCourses.length },
-  { id: "web-development", name: "Web Development", count: 1 },
+  { id: "all", name: "All Courses", count: detailedCourses.length + sampleCourses.length },
+  { id: "web-development", name: "Web Development", count: 2 },
   { id: "design", name: "Design", count: 1 },
-  { id: "data-science", name: "Data Science", count: 1 },
+  { id: "data-science", name: "Data Science", count: 2 },
   { id: "marketing", name: "Marketing", count: 1 },
+  { id: "mobile-development", name: "Mobile Development", count: 1 },
+]
+
+export const courseCategories = [
+  {
+    id: "web-development",
+    name: "Web Development",
+    description: "Frontend and backend web development",
+    icon: "🌐",
+    courseCount: 2,
+  },
+  {
+    id: "data-science",
+    name: "Data Science",
+    description: "Data analysis and machine learning",
+    icon: "📊",
+    courseCount: 2,
+  },
+  {
+    id: "mobile-development",
+    name: "Mobile Development",
+    description: "iOS and Android app development",
+    icon: "📱",
+    courseCount: 1,
+  },
+  {
+    id: "design",
+    name: "Design",
+    description: "UI/UX and graphic design",
+    icon: "🎨",
+    courseCount: 1,
+  },
 ]
 
 export const levels = ["All Levels", "Beginner", "Intermediate", "Advanced"]
