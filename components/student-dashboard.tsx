@@ -1,489 +1,429 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Play, Award, Users, Calendar, TrendingUp, Target, Bell, Settings, LogOut, BookOpen } from "lucide-react"
-import { useApi } from "../lib/api"
-import { useInView } from "../lib/animations"
+import { BookOpen, Clock, Award, TrendingUp, Play, CheckCircle, Calendar } from "lucide-react"
+import { useAuth } from "@/lib/api"
 
-interface StudentDashboardProps {
-  onNavigate?: (page: string) => void
-}
-
-export function StudentDashboard({ onNavigate }: StudentDashboardProps) {
+export function StudentDashboard() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("overview")
-  const [enrollments, setEnrollments] = useState([])
-  const [dashboardData, setDashboardData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
 
-  const api = useApi()
-  const [sectionRef, sectionInView] = useInView()
+  // Sample dashboard data
+  const enrolledCourses = [
+    {
+      id: 1,
+      title: "Complete Web Development Bootcamp",
+      progress: 65,
+      totalLessons: 120,
+      completedLessons: 78,
+      nextLesson: "Building REST APIs with Node.js",
+      instructor: "Sarah Johnson",
+      category: "Web Development",
+      image: "/placeholder.svg?height=100&width=150",
+    },
+    {
+      id: 2,
+      title: "Data Science & Machine Learning",
+      progress: 30,
+      totalLessons: 95,
+      completedLessons: 28,
+      nextLesson: "Introduction to Pandas",
+      instructor: "Dr. Michael Chen",
+      category: "Data Science",
+      image: "/placeholder.svg?height=100&width=150",
+    },
+    {
+      id: 3,
+      title: "Digital Marketing Mastery",
+      progress: 90,
+      totalLessons: 75,
+      completedLessons: 68,
+      nextLesson: "Advanced Analytics Setup",
+      instructor: "Emma Rodriguez",
+      category: "Marketing",
+      image: "/placeholder.svg?height=100&width=150",
+    },
+  ]
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [])
+  const achievements = [
+    {
+      id: 1,
+      title: "First Course Completed",
+      description: "Completed your first course",
+      icon: "🎉",
+      earned: true,
+      date: "2 weeks ago",
+    },
+    {
+      id: 2,
+      title: "Quick Learner",
+      description: "Completed 10 lessons in one day",
+      icon: "⚡",
+      earned: true,
+      date: "1 week ago",
+    },
+    {
+      id: 3,
+      title: "Consistent Student",
+      description: "Studied for 7 days straight",
+      icon: "🔥",
+      earned: false,
+      date: null,
+    },
+    {
+      id: 4,
+      title: "Knowledge Seeker",
+      description: "Enrolled in 5 courses",
+      icon: "📚",
+      earned: false,
+      date: null,
+    },
+  ]
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true)
-      const [enrollmentsResponse, dashboardResponse] = await Promise.all([
-        api.getEnrollments(),
-        api.getDashboardData().catch(() => ({ success: false })),
-      ])
+  const recentActivity = [
+    {
+      id: 1,
+      type: "lesson_completed",
+      title: "Completed: Building REST APIs with Node.js",
+      course: "Complete Web Development Bootcamp",
+      time: "2 hours ago",
+    },
+    {
+      id: 2,
+      type: "quiz_passed",
+      title: "Passed: JavaScript Fundamentals Quiz",
+      course: "Complete Web Development Bootcamp",
+      time: "1 day ago",
+    },
+    {
+      id: 3,
+      type: "course_enrolled",
+      title: "Enrolled in: Digital Marketing Mastery",
+      course: "Digital Marketing Mastery",
+      time: "3 days ago",
+    },
+    {
+      id: 4,
+      type: "certificate_earned",
+      title: "Earned Certificate: HTML & CSS Basics",
+      course: "Complete Web Development Bootcamp",
+      time: "1 week ago",
+    },
+  ]
 
-      if (enrollmentsResponse.success) {
-        setEnrollments(enrollmentsResponse.enrollments || [])
-      }
+  const upcomingDeadlines = [
+    {
+      id: 1,
+      title: "JavaScript Project Submission",
+      course: "Complete Web Development Bootcamp",
+      dueDate: "Tomorrow",
+      priority: "high",
+    },
+    {
+      id: 2,
+      title: "Data Analysis Assignment",
+      course: "Data Science & Machine Learning",
+      dueDate: "In 3 days",
+      priority: "medium",
+    },
+    {
+      id: 3,
+      title: "Marketing Campaign Proposal",
+      course: "Digital Marketing Mastery",
+      dueDate: "Next week",
+      priority: "low",
+    },
+  ]
 
-      if (dashboardResponse.success) {
-        setDashboardData(dashboardResponse.data)
-      }
-    } catch (error) {
-      console.error("Failed to load dashboard data:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleContinueLearning = (courseId: string) => {
-    // Navigate to course content
-    console.log("Continue learning:", courseId)
-  }
-
-  const handleLogout = () => {
-    api.logout()
-    onNavigate?.("home")
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const studentData = {
-    name: "David Okonkwo",
-    email: "david.okonkwo@email.com",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    enrolledCourses: enrollments.length,
-    completedCourses: enrollments.filter((e: any) => e.progress >= 100).length,
-    totalProgress:
-      enrollments.length > 0
-        ? Math.round(enrollments.reduce((acc: number, e: any) => acc + (e.progress || 0), 0) / enrollments.length)
-        : 0,
-    streak: 12,
-    points: 2450,
-    rank: "Advanced Learner",
-    nextSession: "Tomorrow, 2:00 PM",
-    mentor: "James Okafor",
-  }
+  const stats = [
+    {
+      title: "Courses Enrolled",
+      value: "3",
+      icon: BookOpen,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+    },
+    {
+      title: "Hours Learned",
+      value: "127",
+      icon: Clock,
+      color: "text-green-600",
+      bgColor: "bg-green-100",
+    },
+    {
+      title: "Certificates Earned",
+      value: "2",
+      icon: Award,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+    },
+    {
+      title: "Current Streak",
+      value: "5 days",
+      icon: TrendingUp,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100",
+    },
+  ]
 
   return (
-    <div ref={sectionRef} className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="container max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">SpaceHub</span>
-              </div>
-              <Badge variant="secondary">Student Portal</Badge>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
-              <div className="flex items-center gap-3">
-                <img
-                  src={studentData.avatar || "/placeholder.svg"}
-                  alt={studentData.name}
-                  className="w-8 h-8 rounded-full"
-                />
-                <span className="font-medium text-gray-900">{studentData.name}</span>
-              </div>
-              <Button onClick={handleLogout} variant="ghost" size="sm">
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user?.name || "Student"}!</h1>
+          <p className="text-gray-600 mt-2">Continue your learning journey and track your progress</p>
         </div>
-      </header>
 
-      <div className="container max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Student Profile */}
-            <Card
-              className={`transition-all duration-1000 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-            >
-              <CardContent className="p-6 text-center">
-                <img
-                  src={studentData.avatar || "/placeholder.svg"}
-                  alt={studentData.name}
-                  className="w-20 h-20 rounded-full mx-auto mb-4"
-                />
-                <h3 className="font-bold text-gray-900 mb-1">{studentData.name}</h3>
-                <p className="text-sm text-gray-600 mb-3">{studentData.email}</p>
-                <Badge className="bg-blue-100 text-blue-800">{studentData.rank}</Badge>
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <Card
-              className={`transition-all duration-1000 delay-200 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Learning Streak</span>
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold text-orange-600">{studentData.streak}</span>
-                    <span className="text-sm text-gray-500">days</span>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Points Earned</span>
-                  <span className="font-bold text-green-600">{studentData.points}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Courses Enrolled</span>
-                  <span className="font-bold text-blue-600">{studentData.enrolledCourses}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Completed</span>
-                  <span className="font-bold text-purple-600">{studentData.completedCourses}</span>
-                </div>
               </CardContent>
             </Card>
+          ))}
+        </div>
 
-            {/* Next Session */}
-            <Card
-              className={`transition-all duration-1000 delay-400 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Next Session
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="font-medium text-gray-900">1-on-1 Mentor Session</p>
-                  <p className="text-sm text-gray-600">{studentData.nextSession}</p>
-                  <p className="text-sm text-gray-600">with {studentData.mentor}</p>
-                  <Button size="sm" className="w-full mt-3">
-                    Join Session
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Main Content */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="courses">My Courses</TabsTrigger>
+            <TabsTrigger value="achievements">Achievements</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
+          </TabsList>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="courses">My Courses</TabsTrigger>
-                <TabsTrigger value="progress">Progress</TabsTrigger>
-                <TabsTrigger value="achievements">Achievements</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="space-y-6">
-                {/* Welcome Message */}
-                <Card
-                  className={`transition-all duration-1000 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-                >
-                  <CardContent className="p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Welcome back, {studentData.name.split(" ")[0]}! 👋
-                    </h2>
-                    <p className="text-gray-600">
-                      You're doing great! Keep up the momentum and continue your learning journey.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Overall Progress */}
-                <Card
-                  className={`transition-all duration-1000 delay-200 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-                >
-                  <CardHeader>
-                    <CardTitle>Overall Progress</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900">Learning Progress</span>
-                        <Badge variant="secondary">{studentData.totalProgress}% Complete</Badge>
-                      </div>
-                      <Progress value={studentData.totalProgress} className="h-3" />
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <div className="text-2xl font-bold text-blue-600">{studentData.enrolledCourses}</div>
-                          <div className="text-sm text-gray-600">Enrolled</div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-green-600">{studentData.completedCourses}</div>
-                          <div className="text-sm text-gray-600">Completed</div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-orange-600">
-                            {studentData.enrolledCourses - studentData.completedCourses}
-                          </div>
-                          <div className="text-sm text-gray-600">In Progress</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Recent Activity */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <Card
-                    className={`transition-all duration-1000 delay-400 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-lg">Continue Learning</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {enrollments.slice(0, 3).map((enrollment: any, index) => (
-                          <div
-                            key={enrollment.id}
-                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer"
-                            onClick={() => handleContinueLearning(enrollment.course_id)}
-                          >
-                            <img
-                              src={enrollment.thumbnail_url || "/placeholder.svg?height=40&width=40"}
-                              alt={enrollment.title}
-                              className="w-10 h-10 rounded object-cover"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900 text-sm">{enrollment.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Progress value={enrollment.progress || 0} className="h-1 flex-1" />
-                                <span className="text-xs text-gray-500">{enrollment.progress || 0}%</span>
-                              </div>
-                            </div>
-                            <Button size="sm" variant="outline">
-                              <Play className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card
-                    className={`transition-all duration-1000 delay-600 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-lg">Recent Achievements</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {[
-                          { title: "First Course Completed", icon: Award, color: "text-yellow-600" },
-                          { title: "10-Day Streak", icon: TrendingUp, color: "text-green-600" },
-                          { title: "Quiz Master", icon: Target, color: "text-blue-600" },
-                        ].map((achievement, index) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <div
-                              className={`w-8 h-8 rounded-full bg-white flex items-center justify-center ${achievement.color}`}
-                            >
-                              <achievement.icon className="h-4 w-4" />
-                            </div>
-                            <span className="font-medium text-gray-900">{achievement.title}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="courses" className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">My Courses</h2>
-                  <Button onClick={() => onNavigate?.("courses")} variant="outline">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Browse More Courses
-                  </Button>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  {enrollments.map((enrollment: any, index) => (
-                    <Card
-                      key={enrollment.id}
-                      className="hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => handleContinueLearning(enrollment.course_id)}
-                    >
-                      <div className="relative">
-                        <img
-                          src={enrollment.thumbnail_url || "/placeholder.svg?height=200&width=400"}
-                          alt={enrollment.title}
-                          className="w-full h-32 object-cover rounded-t-lg"
-                        />
-                        <div className="absolute top-2 right-2">
-                          <Badge className="bg-blue-600">{enrollment.progress || 0}% Complete</Badge>
-                        </div>
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-bold text-gray-900 mb-2">{enrollment.title}</h3>
-                        <p className="text-sm text-gray-600 mb-3">by {enrollment.instructor_name}</p>
-                        <Progress value={enrollment.progress || 0} className="h-2 mb-3" />
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500">
-                            {enrollment.completed_lessons || 0} of {enrollment.total_lessons || 0} lessons
-                          </span>
-                          <Button size="sm">Continue</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {enrollments.length === 0 && (
-                  <div className="text-center py-12">
-                    <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses enrolled yet</h3>
-                    <p className="text-gray-600 mb-4">Start your learning journey by enrolling in a course</p>
-                    <Button onClick={() => onNavigate?.("courses")}>Browse Courses</Button>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="progress" className="space-y-6">
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Continue Learning */}
+              <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Learning Analytics</CardTitle>
+                    <CardTitle>Continue Learning</CardTitle>
+                    <CardDescription>Pick up where you left off</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Average Score</span>
-                          <span className="font-bold text-green-600">91.5%</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Time Spent Learning</span>
-                          <span className="font-bold text-blue-600">45 hours</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Assignments Completed</span>
-                          <span className="font-bold text-purple-600">12/15</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Projects Submitted</span>
-                          <span className="font-bold text-orange-600">3/5</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <h4 className="font-semibold">Skill Progress</h4>
-                        {[
-                          { skill: "JavaScript", progress: 85 },
-                          { skill: "React", progress: 70 },
-                          { skill: "Node.js", progress: 60 },
-                          { skill: "MongoDB", progress: 45 },
-                        ].map((skill, index) => (
-                          <div key={index} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">{skill.skill}</span>
-                              <span className="text-sm text-gray-600">{skill.progress}%</span>
+                  <CardContent className="space-y-4">
+                    {enrolledCourses.slice(0, 2).map((course) => (
+                      <div key={course.id} className="flex items-center space-x-4 p-4 border rounded-lg">
+                        <img
+                          src={course.image || "/placeholder.svg"}
+                          alt={course.title}
+                          className="w-16 h-16 rounded object-cover"
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                          <p className="text-sm text-gray-600">Next: {course.nextLesson}</p>
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                              <span>Progress</span>
+                              <span>{course.progress}%</span>
                             </div>
-                            <Progress value={skill.progress} className="h-2" />
+                            <Progress value={course.progress} className="h-2" />
                           </div>
-                        ))}
+                        </div>
+                        <Button>
+                          <Play className="h-4 w-4 mr-2" />
+                          Continue
+                        </Button>
                       </div>
-                    </div>
+                    ))}
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </div>
 
-              <TabsContent value="achievements" className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  {[
-                    {
-                      title: "First Project Completed",
-                      description: "Built your first React application",
-                      icon: Award,
-                      earned: true,
-                      date: "2 weeks ago",
-                      color: "bg-yellow-100 text-yellow-800",
-                    },
-                    {
-                      title: "Streak Master",
-                      description: "Maintained 10-day learning streak",
-                      icon: TrendingUp,
-                      earned: true,
-                      date: "1 week ago",
-                      color: "bg-green-100 text-green-800",
-                    },
-                    {
-                      title: "Code Reviewer",
-                      description: "Helped 5 fellow students with code review",
-                      icon: Users,
-                      earned: true,
-                      date: "3 days ago",
-                      color: "bg-blue-100 text-blue-800",
-                    },
-                    {
-                      title: "Full-Stack Hero",
-                      description: "Complete all full-stack modules",
-                      icon: Target,
-                      earned: false,
-                      date: null,
-                      color: "bg-gray-100 text-gray-500",
-                    },
-                  ].map((achievement, index) => (
-                    <Card key={index} className={`${achievement.earned ? "border-green-200" : "border-gray-200"}`}>
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center ${achievement.color}`}
-                          >
-                            <achievement.icon className="h-6 w-6" />
-                          </div>
+              {/* Upcoming Deadlines */}
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Calendar className="h-5 w-5 mr-2" />
+                      Upcoming Deadlines
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {upcomingDeadlines.map((deadline) => (
+                      <div key={deadline.id} className="p-3 border rounded-lg">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 mb-1">{achievement.title}</h3>
-                            <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
-                            {achievement.earned ? (
-                              <Badge className="bg-green-100 text-green-800">Earned {achievement.date}</Badge>
-                            ) : (
-                              <Badge variant="outline">Not earned yet</Badge>
-                            )}
+                            <h4 className="font-medium text-sm">{deadline.title}</h4>
+                            <p className="text-xs text-gray-600">{deadline.course}</p>
+                          </div>
+                          <Badge
+                            variant={
+                              deadline.priority === "high"
+                                ? "destructive"
+                                : deadline.priority === "medium"
+                                  ? "default"
+                                  : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {deadline.dueDate}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivity.slice(0, 4).map((activity) => (
+                    <div key={activity.id} className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                        <p className="text-xs text-gray-600">{activity.course}</p>
+                      </div>
+                      <span className="text-xs text-gray-500">{activity.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="courses" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Courses</CardTitle>
+                <CardDescription>Track your progress across all enrolled courses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {enrolledCourses.map((course) => (
+                    <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                      <div className="relative">
+                        <img
+                          src={course.image || "/placeholder.svg"}
+                          alt={course.title}
+                          className="w-full h-32 object-cover rounded-t-lg"
+                        />
+                        <Badge className="absolute top-2 left-2">{course.category}</Badge>
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-gray-900 mb-2">{course.title}</h3>
+                        <p className="text-sm text-gray-600 mb-3">by {course.instructor}</p>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Progress</span>
+                            <span>{course.progress}%</span>
+                          </div>
+                          <Progress value={course.progress} className="h-2" />
+                          <div className="flex items-center justify-between text-xs text-gray-600">
+                            <span>
+                              {course.completedLessons}/{course.totalLessons} lessons
+                            </span>
+                            <span>{course.progress === 100 ? "Completed" : "In Progress"}</span>
                           </div>
                         </div>
+
+                        <div className="mt-4">
+                          <p className="text-sm text-gray-600 mb-2">Next lesson:</p>
+                          <p className="text-sm font-medium">{course.nextLesson}</p>
+                        </div>
+
+                        <Button className="w-full mt-4">
+                          <Play className="h-4 w-4 mr-2" />
+                          Continue Learning
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="achievements" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Achievements</CardTitle>
+                <CardDescription>Your learning milestones and accomplishments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {achievements.map((achievement) => (
+                    <div
+                      key={achievement.id}
+                      className={`p-4 border rounded-lg ${
+                        achievement.earned ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className="text-2xl">{achievement.icon}</div>
+                        <div className="flex-1">
+                          <h3 className={`font-semibold ${achievement.earned ? "text-green-900" : "text-gray-600"}`}>
+                            {achievement.title}
+                          </h3>
+                          <p className={`text-sm ${achievement.earned ? "text-green-700" : "text-gray-500"}`}>
+                            {achievement.description}
+                          </p>
+                          {achievement.earned && achievement.date && (
+                            <p className="text-xs text-green-600 mt-1">Earned {achievement.date}</p>
+                          )}
+                        </div>
+                        {achievement.earned && <CheckCircle className="h-5 w-5 text-green-600" />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activity" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Learning Activity</CardTitle>
+                <CardDescription>Your complete learning history</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivity.map((activity) => (
+                    <div key={activity.id} className="flex items-start space-x-4 p-4 border rounded-lg">
+                      <div className="w-3 h-3 bg-blue-600 rounded-full mt-2"></div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">{activity.title}</h3>
+                        <p className="text-sm text-gray-600">{activity.course}</p>
+                        <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                      </div>
+                      <div className="text-right">
+                        {activity.type === "lesson_completed" && <Play className="h-4 w-4 text-blue-600" />}
+                        {activity.type === "quiz_passed" && <CheckCircle className="h-4 w-4 text-green-600" />}
+                        {activity.type === "course_enrolled" && <BookOpen className="h-4 w-4 text-purple-600" />}
+                        {activity.type === "certificate_earned" && <Award className="h-4 w-4 text-yellow-600" />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

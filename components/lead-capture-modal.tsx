@@ -4,98 +4,185 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { X, Gift, Star, Users } from "lucide-react"
-import { useApi } from "../lib/api"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { submitLeadCapture } from "@/lib/api"
+import { Loader2, Gift, Star, Users } from "lucide-react"
 
 interface LeadCaptureModalProps {
+  isOpen: boolean
   onClose: () => void
 }
 
-export function LeadCaptureModal({ onClose }: LeadCaptureModalProps) {
+export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    name: "",
     email: "",
     phone: "",
-    interest: "",
-    experience: "",
-    goals: "",
+    interest: "web-development",
   })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-
-  const api = useApi()
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
+    setError("")
+    setLoading(true)
 
     try {
-      const result = await api.submitLead({
-        email: formData.email,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone: formData.phone,
-        interest: `${formData.interest} | Experience: ${formData.experience} | Goals: ${formData.goals}`,
-      })
-
+      const result = await submitLeadCapture(formData)
       if (result.success) {
-        setSubmitted(true)
+        setSuccess(true)
+        setTimeout(() => {
+          onClose()
+          setSuccess(false)
+          setFormData({ name: "", email: "", phone: "", interest: "web-development" })
+        }, 2000)
       } else {
-        alert("Failed to submit. Please try again.")
+        setError(result.error || "Failed to submit. Please try again.")
       }
-    } catch (error) {
-      console.error("Lead submission error:", error)
-      alert("An error occurred. Please try again.")
+    } catch (err) {
+      setError("An unexpected error occurred")
     } finally {
-      setIsSubmitting(false)
+      setLoading(false)
     }
   }
 
-  if (submitted) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
+  }
+
+  if (success) {
     return (
-      <div className="p-8 text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Gift className="w-8 h-8 text-green-600" />
-        </div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">Welcome to SpaceHub! 🎉</h3>
-        <p className="text-gray-600 mb-6">
-          Thank you for your interest! We've sent you a special welcome package with:
-        </p>
-        <div className="space-y-3 mb-8">
-          <div className="flex items-center gap-3 text-left">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <Gift className="w-4 h-4 text-blue-600" />
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <div className="text-center py-8">
+            <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-4">
+              <Gift className="h-6 w-6 text-green-600" />
             </div>
-            <span>Free course preview access</span>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Thank You!</h3>
+            <p className="text-gray-600">
+              We've received your information and will be in touch soon with exclusive offers and course
+              recommendations.
+            </p>
           </div>
-          <div className="flex items-center gap-3 text-left">
-            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-              <Star className="w-4 h-4 text-purple-600" />
-            </div>
-            <span>Exclusive learning resources</span>
-          </div>
-          <div className="flex items-center gap-3 text-left">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <Users className="w-4 h-4 text-green-600" />
-            </div>
-            <span>Community access invitation</span>
-          </div>
-        </div>
-        <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700">
-          Start Exploring
-        </Button>
-      </div>
+        </DialogContent>
+      </Dialog>
     )
   }
 
   return (
-    <div className="relative">
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
-      >
-        <X className="w-5 h-5" />
-      </button>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-center">🚀 Get Early Access + 50% Off!</DialogTitle>
+        </DialogHeader>
 
-      \
+        <Card className="border-0 shadow-none">
+          <CardHeader className="px-0 pt-0 text-center">
+            <CardDescription>Join over 50,000 students and get exclusive access to our premium courses</CardDescription>
+
+            {/* Benefits */}
+            <div className="grid grid-cols-3 gap-4 mt-6 p-4 bg-blue-50 rounded-lg">
+              <div className="text-center">
+                <Star className="h-6 w-6 text-yellow-500 mx-auto mb-2" />
+                <p className="text-xs font-medium">4.9★ Rating</p>
+              </div>
+              <div className="text-center">
+                <Users className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                <p className="text-xs font-medium">50K+ Students</p>
+              </div>
+              <div className="text-center">
+                <Gift className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                <p className="text-xs font-medium">50% Off</p>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="px-0">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name *</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="+234 123 456 7890"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="interest">I'm most interested in</Label>
+                <select
+                  id="interest"
+                  name="interest"
+                  value={formData.interest}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="web-development">Web Development</option>
+                  <option value="data-science">Data Science & AI</option>
+                  <option value="digital-marketing">Digital Marketing</option>
+                  <option value="mobile-development">Mobile App Development</option>
+                  <option value="cybersecurity">Cybersecurity</option>
+                  <option value="cloud-computing">Cloud Computing</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Get My 50% Discount Now
+              </Button>
+
+              <p className="text-xs text-gray-500 text-center">
+                By submitting, you agree to receive course updates and promotional emails. Unsubscribe anytime.
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
+  )
+}

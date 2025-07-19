@@ -1,392 +1,373 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Clock, Users, BookOpen, Eye, Search, Filter } from "lucide-react"
-import { useApi } from "../lib/api"
-import { formatNaira } from "../lib/paystack"
-import { useInView, useStaggerAnimation } from "../lib/animations"
+import { Search, Filter, Star, Users, Clock, ChevronRight, BookOpen } from "lucide-react"
+import type { Course } from "@/lib/api"
 
-interface Course {
-  id: string
-  title: string
-  slug: string
-  description: string
-  short_description: string
-  thumbnail_url: string
-  price: number
-  original_price?: number
-  currency: string
-  duration_hours: number
-  level: string
-  enrollment_count: number
-  rating: number
-  total_reviews: number
-  is_featured: boolean
-  category_name: string
-  instructor_name: string
-  instructor_rating: number
-}
+// Sample course data
+const sampleCourses: Course[] = [
+  {
+    id: 1,
+    title: "Complete Web Development Bootcamp",
+    description: "Master HTML, CSS, JavaScript, React, Node.js and build real-world projects",
+    price: 89000,
+    originalPrice: 150000,
+    rating: 4.8,
+    students: 12500,
+    duration: "40 hours",
+    level: "Beginner to Advanced",
+    image: "/placeholder.svg?height=200&width=300",
+    instructor: "Sarah Johnson",
+    category: "Web Development",
+  },
+  {
+    id: 2,
+    title: "Data Science & Machine Learning",
+    description: "Python, Pandas, NumPy, Scikit-learn, TensorFlow and real data projects",
+    price: 95000,
+    originalPrice: 160000,
+    rating: 4.9,
+    students: 8900,
+    duration: "50 hours",
+    level: "Intermediate",
+    image: "/placeholder.svg?height=200&width=300",
+    instructor: "Dr. Michael Chen",
+    category: "Data Science",
+  },
+  {
+    id: 3,
+    title: "Digital Marketing Mastery",
+    description: "SEO, Social Media, PPC, Content Marketing & Analytics for Nigerian businesses",
+    price: 65000,
+    originalPrice: 120000,
+    rating: 4.7,
+    students: 15600,
+    duration: "30 hours",
+    level: "Beginner",
+    image: "/placeholder.svg?height=200&width=300",
+    instructor: "Emma Rodriguez",
+    category: "Marketing",
+  },
+  {
+    id: 4,
+    title: "Mobile App Development with React Native",
+    description: "Build iOS and Android apps with React Native and publish to app stores",
+    price: 75000,
+    originalPrice: 130000,
+    rating: 4.6,
+    students: 6800,
+    duration: "35 hours",
+    level: "Intermediate",
+    image: "/placeholder.svg?height=200&width=300",
+    instructor: "James Wilson",
+    category: "Mobile Development",
+  },
+  {
+    id: 5,
+    title: "Cybersecurity Fundamentals",
+    description: "Network security, ethical hacking, and cybersecurity best practices",
+    price: 85000,
+    originalPrice: 140000,
+    rating: 4.8,
+    students: 4200,
+    duration: "45 hours",
+    level: "Beginner to Intermediate",
+    image: "/placeholder.svg?height=200&width=300",
+    instructor: "Alex Thompson",
+    category: "Cybersecurity",
+  },
+  {
+    id: 6,
+    title: "Cloud Computing with AWS",
+    description: "Master Amazon Web Services, deployment, and cloud architecture",
+    price: 92000,
+    originalPrice: 155000,
+    rating: 4.7,
+    students: 5600,
+    duration: "42 hours",
+    level: "Intermediate to Advanced",
+    image: "/placeholder.svg?height=200&width=300",
+    instructor: "Maria Garcia",
+    category: "Cloud Computing",
+  },
+]
 
 interface CourseCatalogProps {
-  onCourseSelect?: (courseId: string) => void
-  onCoursePreview?: (courseId: string) => void
-  onEnrollCourse?: (courseId: string) => void
+  onCourseSelect: (course: Course) => void
 }
 
-export function CourseCatalog({ onCourseSelect, onCoursePreview, onEnrollCourse }: CourseCatalogProps) {
-  const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
+export function CourseCatalog({ onCourseSelect }: CourseCatalogProps) {
+  const [courses, setCourses] = useState<Course[]>(sampleCourses)
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>(sampleCourses)
+  const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedLevel, setSelectedLevel] = useState("all")
   const [sortBy, setSortBy] = useState("popular")
-  const [showFilters, setShowFilters] = useState(false)
-
-  const api = useApi()
-  const [sectionRef, sectionInView] = useInView()
-  const [coursesRef, visibleCourses] = useStaggerAnimation(courses.length, 150)
 
   const categories = [
-    { id: "all", name: "All Courses" },
-    { id: "development", name: "Development" },
-    { id: "design", name: "Design" },
-    { id: "data-science", name: "Data Science" },
-    { id: "marketing", name: "Marketing" },
-    { id: "security", name: "Security" },
+    "all",
+    "Web Development",
+    "Data Science",
+    "Marketing",
+    "Mobile Development",
+    "Cybersecurity",
+    "Cloud Computing",
   ]
-
-  const levels = [
-    { id: "all", name: "All Levels" },
-    { id: "beginner", name: "Beginner" },
-    { id: "intermediate", name: "Intermediate" },
-    { id: "advanced", name: "Advanced" },
-  ]
-
-  const sortOptions = [
-    { id: "popular", name: "Most Popular" },
-    { id: "newest", name: "Newest" },
-    { id: "rating", name: "Highest Rated" },
-    { id: "price-low", name: "Price: Low to High" },
-    { id: "price-high", name: "Price: High to Low" },
-  ]
+  const levels = ["all", "Beginner", "Intermediate", "Advanced", "Beginner to Advanced", "Intermediate to Advanced"]
 
   useEffect(() => {
-    loadCourses()
-  }, [selectedCategory, sortBy])
+    let filtered = courses
 
-  const loadCourses = async () => {
-    try {
-      setLoading(true)
-      const params: any = {}
-
-      if (selectedCategory !== "all") {
-        params.category = selectedCategory
-      }
-
-      const response = await api.getCourses(params)
-
-      if (response.success) {
-        setCourses(response.courses || [])
-      }
-    } catch (error) {
-      console.error("Failed to load courses:", error)
-    } finally {
-      setLoading(false)
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (course) =>
+          course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          course.instructor.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
     }
-  }
 
-  const filteredCourses = courses.filter((course) => {
-    const matchesSearch =
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.instructor_name.toLowerCase().includes(searchQuery.toLowerCase())
+    // Filter by category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((course) => course.category === selectedCategory)
+    }
 
-    const matchesLevel = selectedLevel === "all" || course.level === selectedLevel
+    // Filter by level
+    if (selectedLevel !== "all") {
+      filtered = filtered.filter((course) => course.level === selectedLevel)
+    }
 
-    return matchesSearch && matchesLevel
-  })
+    // Sort courses
+    switch (sortBy) {
+      case "popular":
+        filtered.sort((a, b) => b.students - a.students)
+        break
+      case "rating":
+        filtered.sort((a, b) => b.rating - a.rating)
+        break
+      case "price-low":
+        filtered.sort((a, b) => a.price - b.price)
+        break
+      case "price-high":
+        filtered.sort((a, b) => b.price - a.price)
+        break
+      case "newest":
+        filtered.sort((a, b) => b.id - a.id)
+        break
+    }
 
-  const handleEnroll = (courseId: string) => {
-    onEnrollCourse?.(courseId)
-  }
-
-  const handlePreview = (courseId: string) => {
-    onCoursePreview?.(courseId)
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="text-center mb-12">
-          <div className="h-12 bg-gray-200 rounded-lg w-96 mx-auto mb-4 animate-pulse"></div>
-          <div className="h-6 bg-gray-200 rounded-lg w-64 mx-auto animate-pulse"></div>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="h-48 bg-gray-200 animate-pulse"></div>
-              <div className="p-6 space-y-4">
-                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                <div className="flex justify-between">
-                  <div className="h-8 bg-gray-200 rounded w-20 animate-pulse"></div>
-                  <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
+    setFilteredCourses(filtered)
+  }, [courses, searchTerm, selectedCategory, selectedLevel, sortBy])
 
   return (
-    <div ref={sectionRef} className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div
-        className={`text-center mb-12 transition-all duration-1000 ${sectionInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-      >
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-          Browse Our{" "}
-          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Courses</span>
-        </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Explore our job-ready courses designed for Nigerian youth who want to earn global income
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Course Catalog</h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Discover our comprehensive collection of tech courses designed to advance your career
+          </p>
+        </div>
 
-      {/* Search and Filters */}
-      <div className="mb-8">
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <Input
-              placeholder="Search courses, skills, or instructors..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12"
-            />
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Search */}
+            <div className="lg:col-span-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search courses, instructors..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Category Filter */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category === "all" ? "All Categories" : category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Level Filter */}
+            <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+              <SelectTrigger>
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                {levels.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level === "all" ? "All Levels" : level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="popular">Most Popular</SelectItem>
+                <SelectItem value="rating">Highest Rated</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Mobile Filter Toggle */}
-          <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="lg:hidden h-12">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-        </div>
-
-        {/* Filters */}
-        <div className={`grid grid-cols-1 md:grid-cols-4 gap-4 ${showFilters ? "block" : "hidden lg:grid"}`}>
-          {/* Category Filter */}
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Level Filter */}
-          <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-            <SelectTrigger>
-              <SelectValue placeholder="Level" />
-            </SelectTrigger>
-            <SelectContent>
-              {levels.map((level) => (
-                <SelectItem key={level.id} value={level.id}>
-                  {level.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Sort */}
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Clear Filters */}
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSearchQuery("")
-              setSelectedCategory("all")
-              setSelectedLevel("all")
-              setSortBy("popular")
-            }}
-          >
-            Clear All
-          </Button>
-        </div>
-      </div>
-
-      {/* Results Count */}
-      <div className="mb-6">
-        <p className="text-gray-600">
-          Showing {filteredCourses.length} of {courses.length} courses
-        </p>
-      </div>
-
-      {/* Course Grid */}
-      <div ref={coursesRef} className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredCourses.map((course, index) => {
-          const isVisible = index < visibleCourses
-
-          return (
-            <Card
-              key={course.id}
-              className={`group border-0 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer overflow-hidden ${
-                isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-              }`}
-              style={{ transitionDelay: `${index * 100}ms` }}
-              onClick={() => onCourseSelect?.(course.id)}
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Showing {filteredCourses.length} of {courses.length} courses
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("")
+                setSelectedCategory("all")
+                setSelectedLevel("all")
+                setSortBy("popular")
+              }}
             >
-              <div className="relative">
+              <Filter className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
+          </div>
+        </div>
+
+        {/* Course Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredCourses.map((course) => (
+            <Card key={course.id} className="group hover:shadow-xl transition-all duration-300 cursor-pointer bg-white">
+              <div className="relative overflow-hidden rounded-t-lg">
                 <img
-                  src={course.thumbnail_url || "/placeholder.svg?height=200&width=400"}
+                  src={course.image || "/placeholder.svg"}
                   alt={course.title}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex gap-2">
-                  {course.is_featured && (
-                    <Badge className="bg-orange-500 hover:bg-orange-600 text-white">Featured</Badge>
-                  )}
-                  <Badge variant="secondary" className="bg-white/90 text-gray-700">
-                    {course.level}
-                  </Badge>
+                <div className="absolute top-4 left-4">
+                  <Badge className="bg-white text-gray-900">{course.category}</Badge>
                 </div>
-
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handlePreview(course.id)
-                      }}
-                      className="bg-white/90 hover:bg-white"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Preview
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEnroll(course.id)
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <BookOpen className="h-4 w-4 mr-1" />
-                      Enroll
-                    </Button>
-                  </div>
+                <div className="absolute top-4 right-4">
+                  <Badge variant="destructive">
+                    {Math.round(((course.originalPrice! - course.price) / course.originalPrice!) * 100)}% OFF
+                  </Badge>
                 </div>
               </div>
 
-              <CardContent className="p-6">
-                {/* Category */}
-                <div className="mb-2">
-                  <Badge variant="outline" className="text-xs">
-                    {course.category_name}
-                  </Badge>
-                </div>
-
-                {/* Title */}
-                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors duration-300">
-                  {course.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{course.short_description}</p>
-
-                {/* Instructor */}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">{course.instructor_name.charAt(0)}</span>
-                  </div>
-                  <span className="text-sm text-gray-600">{course.instructor_name}</span>
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{course.rating}</span>
-                    <span>({course.total_reviews})</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    <span>{course.enrollment_count.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{course.duration_hours}h</span>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-xl group-hover:text-blue-600 transition-colors line-clamp-2">
+                      {course.title}
+                    </CardTitle>
+                    <CardDescription className="mt-2 line-clamp-2">{course.description}</CardDescription>
                   </div>
                 </div>
+              </CardHeader>
 
-                {/* Pricing */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-gray-900">{formatNaira(course.price)}</span>
-                    {course.original_price && course.original_price > course.price && (
-                      <span className="text-sm text-gray-500 line-through">{formatNaira(course.original_price)}</span>
-                    )}
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Course Stats */}
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-4 w-4" />
+                      <span>{course.duration}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Users className="h-4 w-4" />
+                      <span>{course.students.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <BookOpen className="h-4 w-4" />
+                      <span>{course.level}</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-500">or {formatNaira(Math.ceil(course.price / 6))}/month</div>
+
+                  {/* Rating */}
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < Math.floor(course.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium">{course.rating}</span>
+                    <span className="text-sm text-gray-500">({course.students.toLocaleString()} students)</span>
                   </div>
+
+                  {/* Instructor */}
+                  <p className="text-sm text-gray-600">by {course.instructor}</p>
+
+                  {/* Price and CTA */}
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl font-bold text-gray-900">₦{course.price.toLocaleString()}</span>
+                        {course.originalPrice && (
+                          <span className="text-lg text-gray-500 line-through">
+                            ₦{course.originalPrice.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => onCourseSelect(course)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 group-hover:bg-blue-700"
+                  >
+                    View Course
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
-
-      {/* No Results */}
-      {filteredCourses.length === 0 && (
-        <div className="text-center py-12">
-          <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses found</h3>
-          <p className="text-gray-600 mb-4">Try adjusting your search or filter criteria</p>
-          <Button
-            onClick={() => {
-              setSearchQuery("")
-              setSelectedCategory("all")
-              setSelectedLevel("all")
-            }}
-            variant="outline"
-          >
-            Clear Filters
-          </Button>
+          ))}
         </div>
-      )}
+
+        {/* No Results */}
+        {filteredCourses.length === 0 && (
+          <div className="text-center py-12">
+            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses found</h3>
+            <p className="text-gray-600 mb-4">Try adjusting your search criteria or filters</p>
+            <Button
+              onClick={() => {
+                setSearchTerm("")
+                setSelectedCategory("all")
+                setSelectedLevel("all")
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

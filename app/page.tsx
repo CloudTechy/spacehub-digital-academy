@@ -1,7 +1,5 @@
-"use client"
+import SpaceHubLanding from "@/spacehub-landing"
 
-import SpaceHubLanding from "../spacehub-landing"
-
-export default function Page() {
+export default function Home() {
   return <SpaceHubLanding />
 }

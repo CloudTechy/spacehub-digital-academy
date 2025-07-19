@@ -1,340 +1,305 @@
 "use client"
 
-import { useState, useEffect } from "react"
-
-// API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
 // Types
 export interface User {
-  id: string
+  id: number
+  name: string
   email: string
-  first_name: string
-  last_name: string
-  role: "student" | "instructor" | "admin"
-  avatar_url?: string
-  created_at: string
+  role: "student" | "instructor"
+  avatar?: string
+  enrolledCourses?: number[]
+  createdAt: string
 }
 
 export interface Course {
-  id: string
+  id: number
   title: string
-  slug: string
   description: string
-  short_description: string
-  thumbnail_url: string
   price: number
-  original_price?: number
-  currency: string
-  duration_hours: number
-  level: "beginner" | "intermediate" | "advanced"
-  enrollment_count: number
+  originalPrice?: number
   rating: number
-  total_reviews: number
-  is_featured: boolean
-  is_published: boolean
-  category_name: string
-  instructor_name: string
-  instructor_id: string
-  instructor_rating: number
-  created_at: string
-  updated_at: string
+  students: number
+  duration: string
+  level: string
+  image: string
+  instructor: string
+  category: string
+  curriculum?: {
+    id: number
+    title: string
+    duration: string
+    lessons: {
+      id: number
+      title: string
+      duration: string
+      type: "video" | "text" | "quiz"
+    }[]
+  }[]
+  reviews?: {
+    id: number
+    user: string
+    rating: number
+    comment: string
+    date: string
+  }[]
 }
 
-export interface Enrollment {
-  id: string
-  user_id: string
-  course_id: string
-  progress: number
-  completed_lessons: number
-  total_lessons: number
-  enrollment_date: string
-  completion_date?: string
-  payment_status: "pending" | "completed" | "failed"
-  payment_reference?: string
-  // Course details
-  title: string
-  thumbnail_url: string
-  instructor_name: string
+export interface AuthContextType {
+  user: User | null
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    role?: string,
+  ) => Promise<{ success: boolean; error?: string }>
+  logout: () => void
+  loading: boolean
 }
 
-// API Client Class
-class ApiClient {
-  private baseUrl: string
-  private token: string | null = null
+// Create Auth Context
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl
-    this.token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-  }
+// Auth Provider Component
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-  ): Promise<{ success: boolean; data?: T; error?: string; [key: string]: any }> {
-    const url = `${this.baseUrl}${endpoint}`
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...options.headers,
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem("spacehub_token")
+        if (token) {
+          // Verify token with backend
+          const response = await fetch("/api/auth/verify", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+
+          if (response.ok) {
+            const userData = await response.json()
+            setUser(userData.user)
+          } else {
+            localStorage.removeItem("spacehub_token")
+          }
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error)
+        localStorage.removeItem("spacehub_token")
+      } finally {
+        setLoading(false)
+      }
     }
 
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
-    }
+    checkAuth()
+  }, [])
 
+  const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       })
 
       const data = await response.json()
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || `HTTP ${response.status}: ${response.statusText}`,
-        }
-      }
-
-      return {
-        success: true,
-        ...data,
+      if (response.ok) {
+        setUser(data.user)
+        localStorage.setItem("spacehub_token", data.token)
+        return { success: true }
+      } else {
+        return { success: false, error: data.error || "Login failed" }
       }
     } catch (error) {
-      console.error("API request failed:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Network error",
+      console.error("Login error:", error)
+      return { success: false, error: "Network error" }
+    }
+  }
+
+  const register = async (name: string, email: string, password: string, role = "student") => {
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password, role }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setUser(data.user)
+        localStorage.setItem("spacehub_token", data.token)
+        return { success: true }
+      } else {
+        return { success: false, error: data.error || "Registration failed" }
       }
+    } catch (error) {
+      console.error("Registration error:", error)
+      return { success: false, error: "Network error" }
     }
-  }
-
-  // Auth methods
-  async login(email: string, password: string) {
-    const result = await this.request<{ user: User; token: string }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    })
-
-    if (result.success && result.token) {
-      this.token = result.token
-      if (typeof window !== "undefined") {
-        localStorage.setItem("auth_token", result.token)
-        localStorage.setItem("user", JSON.stringify(result.user))
-      }
-    }
-
-    return result
-  }
-
-  async register(userData: {
-    email: string
-    password: string
-    first_name: string
-    last_name: string
-    role?: "student" | "instructor"
-  }) {
-    const result = await this.request<{ user: User; token: string }>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    })
-
-    if (result.success && result.token) {
-      this.token = result.token
-      if (typeof window !== "undefined") {
-        localStorage.setItem("auth_token", result.token)
-        localStorage.setItem("user", JSON.stringify(result.user))
-      }
-    }
-
-    return result
-  }
-
-  logout() {
-    this.token = null
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token")
-      localStorage.removeItem("user")
-    }
-  }
-
-  getCurrentUser(): User | null {
-    if (typeof window !== "undefined") {
-      const userStr = localStorage.getItem("user")
-      return userStr ? JSON.parse(userStr) : null
-    }
-    return null
-  }
-
-  isAuthenticated(): boolean {
-    return !!this.token
-  }
-
-  // Course methods
-  async getCourses(
-    params: {
-      category?: string
-      level?: string
-      instructor?: boolean
-      featured?: boolean
-      limit?: number
-      offset?: number
-    } = {},
-  ) {
-    const queryParams = new URLSearchParams()
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        queryParams.append(key, value.toString())
-      }
-    })
-
-    const endpoint = `/courses${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    return this.request<{ courses: Course[]; total: number }>(endpoint)
-  }
-
-  async getCourse(id: string) {
-    return this.request<{ course: Course }>(`/courses/${id}`)
-  }
-
-  async createCourse(courseData: Partial<Course>) {
-    return this.request<{ course: Course }>("/courses", {
-      method: "POST",
-      body: JSON.stringify(courseData),
-    })
-  }
-
-  async updateCourse(id: string, courseData: Partial<Course>) {
-    return this.request<{ course: Course }>(`/courses/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(courseData),
-    })
-  }
-
-  // Enrollment methods
-  async getEnrollments() {
-    return this.request<{ enrollments: Enrollment[] }>("/enrollments")
-  }
-
-  async enrollInCourse(courseId: string, paymentReference?: string) {
-    return this.request<{ enrollment: Enrollment }>("/enrollments", {
-      method: "POST",
-      body: JSON.stringify({ course_id: courseId, payment_reference: paymentReference }),
-    })
-  }
-
-  async updateEnrollmentProgress(enrollmentId: string, progress: number) {
-    return this.request<{ enrollment: Enrollment }>(`/enrollments/${enrollmentId}/progress`, {
-      method: "PUT",
-      body: JSON.stringify({ progress }),
-    })
-  }
-
-  // Payment methods
-  async verifyPayment(reference: string) {
-    return this.request<{ payment: any }>(`/payments/verify/${reference}`)
-  }
-
-  async createPayment(data: {
-    course_id: string
-    amount: number
-    email: string
-    metadata?: any
-  }) {
-    return this.request<{ payment_url: string; reference: string }>("/payments/create", {
-      method: "POST",
-      body: JSON.stringify(data),
-    })
-  }
-
-  // Dashboard methods
-  async getDashboardData() {
-    return this.request<{
-      enrollments: Enrollment[]
-      progress: any
-      achievements: any[]
-      upcoming_sessions: any[]
-    }>("/dashboard/student")
-  }
-
-  async getInstructorStats() {
-    return this.request<{
-      courses: Course[]
-      students: any[]
-      revenue: number
-      analytics: any
-    }>("/dashboard/instructor")
-  }
-
-  // Lead capture
-  async submitLead(data: {
-    email: string
-    first_name?: string
-    last_name?: string
-    phone?: string
-    interest?: string
-  }) {
-    return this.request<{ lead: any }>("/leads", {
-      method: "POST",
-      body: JSON.stringify(data),
-    })
-  }
-}
-
-// Create singleton instance
-const apiClient = new ApiClient()
-
-// React hook for API
-export function useApi() {
-  return apiClient
-}
-
-// Auth hook
-export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const currentUser = apiClient.getCurrentUser()
-    setUser(currentUser)
-    setLoading(false)
-  }, [])
-
-  const login = async (email: string, password: string) => {
-    const result = await apiClient.login(email, password)
-    if (result.success) {
-      setUser(result.user)
-    }
-    return result
-  }
-
-  const register = async (userData: {
-    email: string
-    password: string
-    first_name: string
-    last_name: string
-    role?: "student" | "instructor"
-  }) => {
-    const result = await apiClient.register(userData)
-    if (result.success) {
-      setUser(result.user)
-    }
-    return result
   }
 
   const logout = () => {
-    apiClient.logout()
     setUser(null)
+    localStorage.removeItem("spacehub_token")
   }
 
-  return {
+  const value: AuthContextType = {
     user,
-    loading,
     login,
     register,
     logout,
-    isAuthenticated: !!user,
+    loading,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+// Custom hook to use auth context
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
+}
+
+// API Functions for courses and other data
+export async function fetchCourses(): Promise<Course[]> {
+  try {
+    const response = await fetch("/api/courses")
+    if (!response.ok) {
+      throw new Error("Failed to fetch courses")
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching courses:", error)
+    return []
   }
 }
 
-export default apiClient
+export async function fetchCourse(id: number): Promise<Course | null> {
+  try {
+    const response = await fetch(`/api/courses/${id}`)
+    if (!response.ok) {
+      throw new Error("Failed to fetch course")
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching course:", error)
+    return null
+  }
+}
+
+export async function enrollInCourse(courseId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const token = localStorage.getItem("spacehub_token")
+    const response = await fetch("/api/enrollments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ courseId }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      return { success: true }
+    } else {
+      return { success: false, error: data.error || "Enrollment failed" }
+    }
+  } catch (error) {
+    console.error("Enrollment error:", error)
+    return { success: false, error: "Network error" }
+  }
+}
+
+export async function submitLeadCapture(data: {
+  name: string
+  email: string
+  phone?: string
+  interest: string
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch("/api/leads", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+
+    const result = await response.json()
+
+    if (response.ok) {
+      return { success: true }
+    } else {
+      return { success: false, error: result.error || "Failed to submit" }
+    }
+  } catch (error) {
+    console.error("Lead capture error:", error)
+    return { success: false, error: "Network error" }
+  }
+}
+
+// Student Dashboard API
+export async function fetchStudentDashboard(): Promise<{
+  enrolledCourses: Course[]
+  progress: { [courseId: number]: number }
+  certificates: any[]
+} | null> {
+  try {
+    const token = localStorage.getItem("spacehub_token")
+    const response = await fetch("/api/dashboard/student", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch dashboard data")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching student dashboard:", error)
+    return null
+  }
+}
+
+// Instructor Dashboard API
+export async function fetchInstructorDashboard(): Promise<{
+  courses: Course[]
+  students: number
+  revenue: number
+  analytics: any
+} | null> {
+  try {
+    const token = localStorage.getItem("spacehub_token")
+    const response = await fetch("/api/dashboard/instructor", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch dashboard data")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching instructor dashboard:", error)
+    return null
+  }
+}
