@@ -117,9 +117,11 @@ function SpaceHubLanding() {
   const [selectedCourse, setSelectedCourse] = useState<any>(null)
   const [showLeadModal, setShowLeadModal] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
+  const [isMounted, setIsMounted] = useState(false)
   // Show lead capture modal after 30 seconds
   useEffect(() => {
+    setIsMounted(true)
+
     const timer = setTimeout(() => {
       if (!user) {
         setShowLeadModal(true)
@@ -128,6 +130,7 @@ function SpaceHubLanding() {
 
     return () => clearTimeout(timer)
   }, [user])
+  if (!isMounted) return null
 
   const handleGetStarted = () => {
     if (user) {
@@ -819,6 +822,7 @@ function SpaceHubLanding() {
       <LeadCaptureModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} />
     </div>
   )
+
 }
 
 // Main App Component with AuthProvider
